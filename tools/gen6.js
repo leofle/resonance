@@ -4,7 +4,7 @@ const F={noout:0,short:0,counts:0,s0:0,s2:0,s3:0,load:0};
 // A mute is placed only where two dangling rays cross with the SAME arrival beat, so it is
 // guaranteed to receive a coincident double ring. Delays shift beats to create such crossings.
 // usage: node gen6.js <spec> [seconds]
-const E=require('./engine.js');const {trimRows}=require('./solve.js');
+const E=require('../engine.js');const {trimRows}=require('./solve.js');
 const DV={'>':[1,0],'<':[-1,0],'^':[0,-1],'v':[0,1]};const A=Object.keys(DV);const R=a=>a[Math.floor(Math.random()*a.length)];
 const SPECS={
  delay:{W:5,H:4,n:[10,12],D:[1,2],M:[1,1],S:.3,R:0,loadD:true},

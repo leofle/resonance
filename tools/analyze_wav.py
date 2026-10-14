@@ -1,6 +1,6 @@
 import numpy as np,json,wave
 w=wave.open('level4_solve.wav');SR=w.getframerate();x=np.frombuffer(w.readframes(w.getnframes()),dtype=np.int16)/32768.0
-E=json.load(open('level4_expected.json'));SCALE=[0,2,4,7,9,12,14,16,19,21,24,26,28]
+E=json.load(open('tools/level4_expected.json'));SCALE=[0,2,4,7,9,12,14,16,19,21,24,26,28]
 peak=np.abs(x).max();print(f"duration {len(x)/SR:.2f}s peak {peak:.4f} = {20*np.log10(peak):.2f} dBFS, clipped samples {(np.abs(x)>=0.999).sum()}")
 # onset detection: positive jumps in 2ms-hop RMS energy
 hop=int(.002*SR);fr=len(x)//hop;env=np.array([np.sqrt(np.mean(x[i*hop:(i+1)*hop]**2)) for i in range(fr)])

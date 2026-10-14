@@ -36,9 +36,9 @@ const {chromium}=require('playwright-core');
     P.forEach(([x,y],i)=>{for(let k=0;k<(4-ks[i])%4;k++)rotate(grid[y][x])})}});
   for(let i=0;i<s.P.length;i++)for(let k=0;k<s.ks[i];k++)await p.click(`#c${s.P[i][0]}_${s.P[i][1]} .rot`);
   await p.click(`#c${s.x}_${s.y}`);await p.waitForTimeout(700);
-  if(L===6){const past=await p.$$eval('.tile.past',e=>e.length);const bn=await p.$$eval('.beatno',e=>e.length);ok(past>0&&bn>0,`L7 earlier tiles faded (${past}) and beat numbers shown (${bn})`);await p.screenshot({path:'shot_l7_chain.png'})}
+  if(L===6){const past=await p.$$eval('.tile.past',e=>e.length);const bn=await p.$$eval('.beatno',e=>e.length);ok(past>0&&bn>0,`L7 earlier tiles faded (${past}) and beat numbers shown (${bn})`);await p.screenshot({path:'tools/shots/shot_l7_chain.png'})}
   await p.waitForSelector('#win',{state:'visible',timeout:10000});ok(true,`level ${L+1} solved through UI`);
-  await p.screenshot({path:`shot_win_${L+1}.png`});await p.click('#next');await p.waitForTimeout(50);ok(await p.evaluate(()=>li)===(L+1)%10,'Next advances (Play again wraps to 1)');}
- await go(9);await p.screenshot({path:'shot_l10.png'});await go(6);await p.screenshot({path:'shot_l7.png'});
+  await p.screenshot({path:`tools/shots/shot_win_${L+1}.png`});await p.click('#next');await p.waitForTimeout(50);ok(await p.evaluate(()=>li)===(L+1)%10,'Next advances (Play again wraps to 1)');}
+ await go(9);await p.screenshot({path:'tools/shots/shot_l10.png'});await go(6);await p.screenshot({path:'tools/shots/shot_l7.png'});
  ok(await p.evaluate(()=>!!MASTER&&AC.destination!==undefined),'master chain created');
  ok(errs.length===0,'no page errors '+errs.join('|'));await b.close()})();
