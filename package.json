@@ -11,5 +11,8 @@
   "license": "ISC",
   "dependencies": {
     "playwright-core": "^1.64.0"
+  },
+  "devDependencies": {
+    "pngjs": "^7.0.0"
   }
 }
