@@ -117,5 +117,6 @@ document.getElementById('undo').onclick=()=>{if(busy||!history.length)return;con
 document.getElementById('sound').onclick=e=>{soundOn=!soundOn;e.target.textContent=soundOn?'🔊':'🔇'};
 addEventListener('keydown',e=>{if(e.key==='r')document.getElementById('restart').click();if(e.key==='z')document.getElementById('undo').click()});
 addEventListener('resize',()=>{if(!busy)render()});
-load(Math.min(li,LEVELS.length-1));
+// fresh load: first unsolved level (level 1 for new players); dots remain the level picker
+const firstOpen=LEVELS.findIndex((_,j)=>!done.includes(j));load(firstOpen<0?0:firstOpen);
 </script></body></html>
