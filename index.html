@@ -4,7 +4,7 @@
 :root{--bg:#0d0b1a;--tile:#1d1938;--glow:#8ef0ff}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{margin:0;min-height:100vh;background:radial-gradient(circle at 50% 30%,#1c1640,var(--bg) 70%);color:#e9e6ff;font-family:system-ui,-apple-system,Segoe UI,sans-serif;display:flex;flex-direction:column;align-items:center;user-select:none;overflow:hidden}
-header{margin-top:22px;text-align:center}
+header{margin-top:22px;text-align:center;position:relative;z-index:10}
 h1{margin:0;font-weight:300;letter-spacing:.4em;font-size:22px}
 #lvl{opacity:.6;font-size:13px;letter-spacing:.2em;margin-top:6px}
 #hint{min-height:22px;margin:14px 0 18px;opacity:.85;font-size:15px;text-align:center;padding:0 16px}
@@ -126,7 +126,7 @@ function load(i){li=i;localStorage.resLvl=i;grid=trim(parse(LEVELS[i]));history=
  document.getElementById('lvl').textContent=`${i+1} / ${LEVELS.length} · ${LEVELS[i].name.toUpperCase()}`;
  document.getElementById('hint').textContent=LEVELS[i].hint;
  document.getElementById('dots').innerHTML=LEVELS.map((_,j)=>`<i class="${done.includes(j)?'done':''} ${j===i?'cur':''}" data-j="${j}"></i>`).join('');
- document.querySelectorAll('#dots i').forEach(e=>e.onclick=()=>{if(!busy)load(+e.dataset.j)})}
+ document.querySelectorAll('#dots i').forEach(e=>e.onclick=()=>{const w=document.getElementById('win');if(w.style.display==='flex'){w.style.display='none';load(+e.dataset.j)}else if(!busy)load(+e.dataset.j)})}
 function render(){const H=grid.length,W=grid[0].length;const s=Math.min(78,Math.floor((Math.min(innerWidth,560)-40)/W)-10,Math.floor((innerHeight-260)/H)-10);
  B.style.setProperty('--s',s+'px');B.style.gridTemplateColumns=`repeat(${W},${s}px)`;B.innerHTML='';
  grid.forEach((r,y)=>r.forEach((c,x)=>{const d=document.createElement('div');d.className='cell';d.id=`c${x}_${y}`;
