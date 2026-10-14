@@ -56,43 +56,49 @@ button:hover{background:#ffffff22}
 #dots{display:flex;gap:6px;margin-top:8px;justify-content:center}
 #dots i{width:8px;height:8px;border-radius:50%;background:#ffffff22;cursor:pointer}
 #dots i.done{background:#8ef0ff}#dots i.cur{outline:2px solid #fff}
+#tune{display:flex;align-items:center;gap:12px;margin:0 0 14px}
+#strip{display:flex;gap:4px;height:112px;padding:4px 6px;border-radius:12px;background:#ffffff08;box-shadow:inset 0 0 0 1px #ffffff14}
+#strip .col{position:relative;width:26px;border-radius:6px;transition:background .15s}
+#strip .col .bn{position:absolute;top:1px;left:0;right:0;text-align:center;font-size:9px;opacity:.5}
+#strip .col i{position:absolute;left:3px;width:20px;height:11px;border-radius:6px;background:hsl(var(--h),75%,60%);font:700 9px/11px system-ui;font-style:normal;text-align:center;color:#111}
+#strip .col.hl{background:#ffffff22}#strip .col.ok{background:#3ddc8433;box-shadow:inset 0 -3px 0 #3ddc84}#strip .col.bad{background:#ff3b5c44;box-shadow:inset 0 -3px 0 #ff3b5c}
+.slot{background:#ffffff05;box-shadow:inset 0 0 0 1px #ffffff0d;border-radius:12px}
+.tile{border-bottom:4px solid hsl(var(--h),70%,58%)}
+.pc{position:absolute;top:3px;left:4px;font:700 10px/14px system-ui;min-width:14px;text-align:center;border-radius:7px;background:hsl(var(--h),70%,58%);color:#111;z-index:3}
 </style></head><body>
 <header><h1>RESONANCE</h1><div id="lvl"></div><div id="dots"></div></header>
 <div id="hint"></div><div id="msg" aria-live="polite" aria-hidden="true"></div>
+<div id="tune"><button id="listen" title="Play the target melody (L)">♪ Listen</button><div id="strip" aria-label="Target melody"></div></div>
 <div id="board"></div>
 <div id="bar"><button id="undo">↶ Undo</button><button id="restart">⟲ Restart</button><button id="sound">🔊</button></div>
 <div id="flash"></div>
 <div id="win"><h2>RESOLVED</h2><button id="next">Next ›</button></div>
 <script>
-// Tokens: "." empty | ">" "<" "^" "v" arrow | "S-" split left+right | "S|" split up+down
-// "D?" delay arrow (rings one beat later) | "M?" mute arrow (needs 2 hits) | "R?" rotatable arrow
+// Resonance v2 engine (shared by node tools and the browser build).
+// Board: always 6x6. Token = "<type>:<pitch>" or "." for empty.
+//   type: ">" "<" "^" "v" arrow | "S-" split left+right | "S|" split up+down
+//         "D?" delay arrow (passes the ring on 2 beats later) | "M?" mute arrow | "R?" rotatable arrow
+//   pitch: 0..7, index into the pentatonic SCALE; a fixed property of the tile.
+// Rules: tap one tile (beat 0). A ringing tile sends a ring in its direction(s) to the next tile
+// (skipping empties), arriving one beat later (two for delay). Each tile rings once.
+// Mute tiles ring only when TWO OR MORE rings arrive on the SAME beat; a lone ring is absorbed.
+// Melody of a chain = for each beat 0..last, the sorted pitches of tiles that ring on that beat.
+// Level is won when every tile rings AND the chain's melody equals the level's target melody.
+const N=6;
+const SCALE=[0,2,4,7,9,12,14,16];           // semitones above BASE_HZ (major pentatonic, 1.5 octaves)
+const BASE_HZ=220;
 const DIRS={'>':[1,0],'<':[-1,0],'^':[0,-1],'v':[0,1]};
 const ROT={'>':'v','v':'<','<':'^','^':'>'};
-const LEVELS=[
- {name:"First Note",hint:"Tap a tile. Its ring travels where the arrow points.",rows:["> > > >"]},
- {name:"Corner",hint:"Rings follow every turn.",rows:["> > v",". . v","< < <"]},
- {name:"Gaps",hint:"A ring jumps empty space to the next tile.",rows:["> . . v","^ . . .","^ . . v","^ < . <"]},
- {name:"Split",hint:"Split tiles send the ring both ways.",rows:[". ^ .","< S- >",". ^ ."].map(r=>r)},
- {name:"Branches",hint:"Find the one tile that reaches everything.",rows:["v . . S- .","> . . ^ .","S| . . ^ .","v . . . .","> > > ^ ."]},
- {name:"Delay",hint:"Hourglass tiles wait one extra beat.",rows:["> D> v",". . v","^ < <"]},
- {name:"Hush",hint:"Muted tiles only ring on their second hit.",rows:["S- > M> > .",". . . . .","^ . . . ."]},
- {name:"Two Voices",hint:"Two rings must reach the muted tile.",rows:["> v . .",". > M> v","S| ^ . v",". . . v",". . . <"]},
- {name:"Turn",hint:"Tap the ↻ on a tile to rotate it before you play.",rows:["> R> . v",". . . v","R> . . <"]},
- {name:"Finale",hint:"Everything you've learned, together.",rows:["R> . S| . R<",". . . . .","M^ . D^ . v","^ . . . v","^ < R> < <"]},
-];
-function parse(lv){return lv.rows.map(r=>r.trim().split(/\s+/).map(t=>t==='.'?null:{t:t}));}
+const LEVELS=[];
+function parse(lv){return lv.rows.map(r=>r.trim().split(/\s+/).map(t=>{if(t==='.')return null;const [k,p]=t.split(':');return{t:k,p:+(p||0)}}));}
 function tileDirs(c){const k=c.t;if(k==='S-')return['<','>'];if(k==='S|')return['^','v'];return[k[k.length-1]];}
 function kind(c){const k=c.t;if(k[0]==='S')return'split';if(k.length===1)return'arrow';return{D:'delay',M:'mute',R:'rot'}[k[0]];}
 function rotate(c){const d=c.t[1];c.t='R'+ROT[d];}
-// Timing rule (build 4): rings resolve beat by beat. A mute tile only rings when
-// TWO OR MORE rings arrive on the SAME beat; a lone ring is absorbed (no memory carries
-// over to later beats). Delay tiles emit 2 beats after ringing instead of 1, which
-// shifts arrival times and so decides whether rings coincide at a mute.
-// returns events [{beat,x,y,muted?}] and solved flag
 function targets(grid,x0,y0){const H=grid.length,W=grid[0].length,out=[];
  for(const d of tileDirs(grid[y0][x0])){let [dx,dy]=DIRS[d],x=x0+dx,y=y0+dy;
   while(x>=0&&y>=0&&x<W&&y<H&&!grid[y][x]){x+=dx;y+=dy;}
   if(x>=0&&y>=0&&x<W&&y<H)out.push([x,y]);}return out}
+// returns events [{beat,x,y,muted?}], solved (all tiles rang), melody [[pitches] per beat]
 function simulate(grid,sx,sy){
  const rung=new Set(),ev=[],arr={0:{[sx+','+sy]:1}};
  const total=grid.flat().filter(Boolean).length;
@@ -101,75 +107,108 @@ function simulate(grid,sx,sy){
    if(kind(c)==='mute'&&here[key]<2){ev.push({beat:b,x,y,muted:true});continue;}
    rung.add(key);ev.push({beat:b,x,y});const lag=kind(c)==='delay'?2:1;
    for(const [tx,ty] of targets(grid,x,y)){const k2=tx+','+ty;(arr[b+lag]=arr[b+lag]||{})[k2]=(arr[b+lag][k2]||0)+1;}}}
- return{ev,solved:rung.size===total};
+ return{ev,solved:rung.size===total,melody:melodyOf(grid,ev)};
 }
-//if(typeof module!=='undefined')module.exports={LEVELS,parse,simulate,kind,rotate,targets};
+function melodyOf(grid,ev){const r=ev.filter(e=>!e.muted);if(!r.length)return[];const L=Math.max(...r.map(e=>e.beat))+1;
+ const m=Array.from({length:L},()=>[]);r.forEach(e=>m[e.beat].push(grid[e.y][e.x].p));m.forEach(c=>c.sort((a,b)=>a-b));return m}
+const chordEq=(a,b)=>!!a&&!!b&&a.length===b.length&&a.every((v,i)=>v===b[i]);
+const melodyEq=(a,b)=>a.length===b.length&&a.every((c,i)=>chordEq(c,b[i]));
+// first beat index where played melody diverges from target (-1 if equal)
+function firstWrongBeat(m,t){const L=Math.max(m.length,t.length);for(let i=0;i<L;i++)if(!chordEq(m[i]||[],t[i]||[]))return i;return -1}
+const freq=p=>BASE_HZ*Math.pow(2,SCALE[p]/12);
+//if(typeof module!=='undefined')module.exports={N,SCALE,BASE_HZ,LEVELS,parse,simulate,kind,rotate,targets,melodyOf,chordEq,melodyEq,firstWrongBeat,freq};
 
-LEVELS.splice(0,LEVELS.length,...[{"name": "First Note", "hint": "Tap a tile. Its ring travels where the arrow points.", "rows": ["> > v", ". . v", "< < <"]}, {"name": "Gaps", "hint": "Rings leap over empty space. Hover a tile to see where it reaches.", "rows": [". . v . <", "> . . . ^", "^ < < . .", ". ^ < . <"]}, {"name": "Split", "hint": "Split tiles send the ring both ways.", "rows": [". S| . . .", ". . . . .", "S- S| . S- v", "S| S- ^ v S-"]}, {"name": "Branches", "hint": "Almost every tile nearly works. Find the one that does.", "rows": ["> . S| . S-", "S- . v . .", "S| < < . .", "S- v . . .", "S- S- . . ^"]}, {"name": "Hush", "hint": "Striped tiles stay silent unless two rings hit them on the same beat.", "rows": ["Mv . S- > S|", ". . S| . .", ". . S| . .", "^ . S- S| ."]}, {"name": "Delay", "hint": "Hourglass tiles hold the ring one extra beat. Use one to make rings meet.", "rows": ["^ . D> Mv .", "^ S- . . S-", ". . S| . .", ". S| S- ^ ."]}, {"name": "Turn", "hint": "Tap the gold ↻ to rotate a tile before you play (right-click or hold to turn back).", "rows": ["R< R< . > v", "R^ . . . S-", ". v . . .", ". > . . v", ". . . . ."]}, {"name": "Chorus", "hint": "Turn the dial first, then count the beats so the voices meet.", "rows": [". . . . Mv S-", "D> . . . . ^", "S| S- R^ S- . ^", "> . . D> S| .", ". v . . S- v", "S| . . . . S-"]}, {"name": "Tuning", "hint": "Tune every dial, then strike once.", "rows": ["v . . . . R>", ". S- . . . Rv", ". ^ < < . .", ". . . ^ . .", "> . . R^ > <"]}, {"name": "Finale", "hint": "Everything you know, together.", "rows": ["^ S- . R> .", "< . < . <", ". S| R< . .", ". D> . Mv .", "^ < . S- ^"]}]);
-const SCALE=[0,2,4,7,9,12,14,16,19,21,24,26,28];
-let AC=null,soundOn=true;
-let MASTER=null;
+LEVELS.splice(0,LEVELS.length,...[{"name": "First Note", "hint": "Tap a tile: its ring follows the arrows, one tile per beat. Your chain plays the tune shown above.", "rows": [". v:5 . . <:0 .", "v:2 <:2 . . ^:5 .", ". . . . . .", ". . . . . .", "v:6 . . . . .", ">:3 . . . . ."], "melody": [[5], [0], [5], [2], [2], [6], [3]]}, {"name": "Gaps", "hint": "Rings leap over empty slots to the next tile in line.", "rows": [". . . . . .", ". . v:5 . . .", ". . . . . .", ">:7 . . . >:2 v:4", "^:6 . <:1 . . .", ". . . . . v:0"], "melody": [[5], [1], [6], [7], [2], [4], [0]]}, {"name": "Split", "hint": "A split tile always rings out of both its sides, whichever side the ring came in from. Several taps ring every tile, but only one plays the tune.", "rows": ["^:5 . . . . S|:3", "^:3 . . . . S|:0", "^:6 . . . . .", ". . v:2 . . S-:2", "S|:1 . <:7 . . .", "<:1 . . . . ."], "melody": [[0], [2, 3], [2], [7], [1], [1, 6], [3], [5]]}, {"name": "Branches", "hint": "Many starts ring every tile. Listen: only one plays the tune.", "rows": ["S-:0 . v:4 . . .", "S|:1 S-:5 . v:3 . .", ". ^:3 S-:7 . . .", ". . . . . .", ". S|:1 . S-:5 . .", "<:1 S|:3 . . . ."], "melody": [[3], [1], [3], [5], [1, 3], [0, 1, 5], [4], [7]]}, {"name": "Hush", "hint": "Striped tiles stay silent unless two rings hit them on the same beat; then they join the chord.", "rows": ["M<:1 <:6 . S-:1 S|:0 .", ". >:0 S-:6 S|:3 . .", ". . . . . .", ". . . . . .", ". . . . >:4 <:1", "S|:3 . . <:3 . ."], "melody": [[6], [0, 3], [1, 3], [0, 3, 6], [1, 4], [1]]}, {"name": "Delay", "hint": "Hourglass tiles hold the ring one extra beat before passing it on.", "rows": [". M^:4 . . . S-:7", ". . >:1 . S-:1 S|:5", ". . . . . .", ". . . . S|:3 S-:4", ". S|:2 . . D<:2 .", ". >:7 . . . S-:4"], "melody": [[3], [1, 2], [1, 5], [2, 4, 7], [4, 7], [4]]}, {"name": "Turn", "hint": "Tap ↻ to rotate a tile (right-click or hold to turn back). Tune the dials, then play the tune.", "rows": [". . R^:2 <:1 . .", "^:4 . . S|:6 . .", ". . v:1 S|:6 . .", "^:2 . . S|:5 . .", "^:4 . R>:0 ^:4 . .", ". . . . . ."], "melody": [[6], [1, 6], [2, 5], [1, 4], [0], [4], [2], [4]]}, {"name": "Chorus", "hint": "Splits, silence, delay and a dial: count the beats.", "rows": [". . . . >:0 v:5", ". . . . . .", "M>:5 . . S-:4 S|:2 .", ". . . S|:2 . .", "D^:3 S-:1 S-:1 S|:2 >:3 <:0", ". . S|:1 Rv:0 . ."], "melody": [[1], [1, 2], [0, 2, 3], [1, 4], [2, 5], [0, 3], [0, 5]]}, {"name": "Tuning", "hint": "Three dials. Every setting rings, only one sings.", "rows": [". . v:7 . . S|:3", "S-:4 . . . >:2 ^:0", ". Rv:5 . . . R>:4", "S|:1 S|:4 S|:0 . . .", ". . S|:7 . . .", "S|:0 S-:6 R>:7 . . ."], "melody": [[4], [5, 6], [0, 4, 7], [0, 1, 7], [0, 3, 4], [2, 7]]}, {"name": "Finale", "hint": "Everything you know, together.", "rows": [". . v:5 . . R>:2", ". . . . . .", "v:0 . S-:6 S-:6 . S|:1", "D>:0 >:6 . . R>:6 .", ". . . S|:1 . S-:5", ". . S|:6 S-:2 M<:7 ."], "melody": [[6], [0, 6], [0, 1], [2, 5], [1, 5, 6], [2, 6], [6, 7]]}]);
+const HUE=[0,28,52,120,175,205,255,300];           // one colour per pitch (shared by tiles and the melody strip)
+const BEAT=180;
+let AC=null,soundOn=true,MASTER=null,TM=[];
+const later=(f,ms)=>{const t=setTimeout(f,ms);TM.push(t);return t};
+function clearTimers(){TM.forEach(clearTimeout);TM=[]}
 function master(a){// master gain -> limiter so dense chains never clip
  const g=a.createGain();g.gain.value=.7;const c=a.createDynamicsCompressor();c.threshold.value=-10;c.knee.value=6;c.ratio.value=12;c.attack.value=.003;c.release.value=.25;g.connect(c);c.connect(a.destination);return g}
 function ac(){if(!AC){AC=new (window.AudioContext||window.webkitAudioContext)();MASTER=master(AC)}if(AC.state==='suspended')AC.resume();return AC}
-function note(i,t=0,vol=.22,dur=1.4){if(!soundOn)return;const a=ac(),o=a.createOscillator(),o2=a.createOscillator(),g=a.createGain(),f=220*Math.pow(2,SCALE[i%SCALE.length]/12);
+// tile note: pitch index p (0..7) -> pentatonic frequency (engine freq())
+function note(p,t=0,vol=.22,dur=1.4){if(!soundOn)return;const a=ac(),o=a.createOscillator(),o2=a.createOscillator(),g=a.createGain(),f=freq(p);
  o.type='sine';o2.type='triangle';o.frequency.value=f;o2.frequency.value=f*2;const s=a.currentTime+t;
  g.gain.setValueAtTime(0,s);g.gain.linearRampToValueAtTime(vol,s+.01);g.gain.exponentialRampToValueAtTime(.0001,s+dur);
  const g2=a.createGain();g2.gain.value=.25;o.connect(g);o2.connect(g2);g2.connect(g);g.connect(MASTER);o.start(s);o2.start(s);o.stop(s+dur);o2.stop(s+dur)}
-function thud(){if(!soundOn)return;const a=ac(),o=a.createOscillator(),g=a.createGain();o.frequency.value=90;g.gain.setValueAtTime(.15,a.currentTime);g.gain.exponentialRampToValueAtTime(.001,a.currentTime+.2);o.connect(g);g.connect(MASTER);o.start();o.stop(a.currentTime+.2)}
+// wrong beat: a short harsh minor-second cluster (sawtooth a semitone above + below the played note) so the error is audible
+function clash(p,t=0){if(!soundOn)return;const a=ac(),s=a.currentTime+t,f=freq(p);
+ [f*Math.pow(2,1/12),f*Math.pow(2,-1/12)].forEach(fr=>{const o=a.createOscillator(),g=a.createGain();o.type='sawtooth';o.frequency.value=fr;
+  g.gain.setValueAtTime(0,s);g.gain.linearRampToValueAtTime(.07,s+.01);g.gain.exponentialRampToValueAtTime(.0001,s+.35);o.connect(g);g.connect(MASTER);o.start(s);o.stop(s+.36)})}
+function thud(t=0){if(!soundOn)return;const a=ac(),o=a.createOscillator(),g=a.createGain(),s=a.currentTime+t;o.frequency.value=90;g.gain.setValueAtTime(.15,s);g.gain.exponentialRampToValueAtTime(.001,s+.2);o.connect(g);g.connect(MASTER);o.start(s);o.stop(s+.2)}
+function playMelody(m,t0=0){m.forEach((ch,i)=>ch.forEach(p=>note(p,t0+i*BEAT/1000)))}
 const ARROW={'>':0,'v':90,'<':180,'^':270};
-function svgFor(c){const k=kind(c);const sw='stroke="#cfc8ff" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"';
+function svgFor(c){const k=kind(c);const sw='stroke="#e9e6ff" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"';
  if(k==='split'){const r=c.t==='S|'?90:0;return `<svg viewBox="0 0 24 24" ${sw} style="transform:rotate(${r}deg)"><path d="M2 12h20M6 8l-4 4 4 4M18 8l4 4-4 4"/></svg>`}
  const d=c.t[c.t.length-1];return `<svg viewBox="0 0 24 24" ${sw} style="transform:rotate(${ARROW[d]}deg)"><path d="M4 12h15M13 6l6 6-6 6"/></svg>`}
-let li=+(localStorage.resLvl||0),grid,history=[],busy=false,done=JSON.parse(localStorage.resDone||'[]');
-const B=document.getElementById('board');
-function trim(g){while(g.length&&g[g.length-1].every(c=>!c))g.pop();while(g.length&&g[0].every(c=>!c))g.shift();const W=g[0].length;let a=0,b=W-1;while(g.every(r=>!r[a]))a++;while(g.every(r=>!r[b]))b--;return g.map(r=>r.slice(a,b+1))}
-function load(i){li=i;localStorage.resLvl=i;grid=trim(parse(LEVELS[i]));history=[];busy=false;render();
+const KEY='res2';   // v2 levels: fresh progress key
+let li=0,grid,history=[],busy=false,done=JSON.parse(localStorage[KEY+'Done']||'[]');
+const B=document.getElementById('board'),S=document.getElementById('strip');
+function load(i){clearTimers();li=i;localStorage[KEY+'Lvl']=i;grid=parse(LEVELS[i]);history=[];busy=false;LP&&clearTimeout(LP);LP=null;longFired=false;
+ const m=document.getElementById('msg');m.classList.remove('show');m.textContent='';m.setAttribute('aria-hidden','true');
+ render();strip();
  document.getElementById('lvl').textContent=`${i+1} / ${LEVELS.length} · ${LEVELS[i].name.toUpperCase()}`;
  document.getElementById('hint').textContent=LEVELS[i].hint;
- document.getElementById('dots').innerHTML=LEVELS.map((_,j)=>`<i class="${done.includes(j)?'done':''} ${j===i?'cur':''}" data-j="${j}"></i>`).join('');
- document.querySelectorAll('#dots i').forEach(e=>e.onclick=()=>{const w=document.getElementById('win');if(w.style.display==='flex'){w.style.display='none';load(+e.dataset.j)}else if(!busy)load(+e.dataset.j)})}
-function render(){const H=grid.length,W=grid[0].length;const s=Math.min(78,Math.floor((Math.min(innerWidth,560)-40)/W)-10,Math.floor((innerHeight-260)/H)-10);
- B.style.setProperty('--s',s+'px');B.style.gridTemplateColumns=`repeat(${W},${s}px)`;B.innerHTML='';
+ document.getElementById('dots').innerHTML=LEVELS.map((_,j)=>`<i class="${done.includes(j)?'done':''} ${j===i?'cur':''}" data-j="${j}" title="Level ${j+1}"></i>`).join('');
+ document.querySelectorAll('#dots i').forEach(e=>e.onclick=()=>{document.getElementById('win').style.display='none';load(+e.dataset.j)});
+ if(AC)later(listen,350)}
+// melody strip: one column per beat, one dot per note (height + colour = pitch, number = pitch label on tiles)
+function strip(){const m=LEVELS[li].melody;S.innerHTML=m.map((ch,i)=>`<div class="col" id="b${i}"><span class="bn">${i+1}</span>${ch.map(p=>`<i style="--h:${HUE[p]};bottom:${6+p*11.5}px">${p+1}</i>`).join('')}</div>`).join('')}
+function listen(){if(busy)return;ac();playMelody(LEVELS[li].melody);document.querySelectorAll('#strip .col').forEach((c,i)=>later(()=>{c.classList.add('hl');later(()=>c.classList.remove('hl'),BEAT)},i*BEAT))}
+function tileSize(){return Math.max(34,Math.min(68,Math.floor((Math.min(innerWidth,560)-24-50)/N),Math.floor((innerHeight-420)/N)-10))}
+function render(){clearTimeout(LP);const s=tileSize();
+ B.style.setProperty('--s',s+'px');B.style.gridTemplateColumns=`repeat(${N},${s}px)`;B.innerHTML='';
  grid.forEach((r,y)=>r.forEach((c,x)=>{const d=document.createElement('div');d.className='cell';d.id=`c${x}_${y}`;
-  if(c){const k=kind(c);d.className+=' tile'+(k==='split'||k==='arrow'?'':' '+(k==='rot'?'rotable':k));d.innerHTML=(k==='delay'?HG:'')+svgFor(c)+(k==='delay'?'<span class="dl">+1 beat</span>':'')+(k==='mute'?'<span class="badge" style="background:#05040c;padding:0 3px;border-radius:4px">×2</span>':'');
-   d.style.setProperty('--h',(y*47+x*83)%360);
-   if(k==='rot'){const b=document.createElement('div');b.className='rot';b.textContent='↻';b.title='Rotate clockwise (right-click / long-press tile: counter-clockwise)';b.onclick=e=>{e.stopPropagation();turn(x,y,1)};d.appendChild(b);
-    d.oncontextmenu=e=>{e.preventDefault();clearTimeout(LP);if(!longFired)turn(x,y,3)};
-    d.onpointerdown=e=>{longFired=false;if(e.button)return;clearTimeout(LP);LP=setTimeout(()=>{LP=null;longFired=true;turn(x,y,3)},450)};d.onpointerup=d.onpointerleave=()=>{clearTimeout(LP)}}
-   else d.oncontextmenu=e=>e.preventDefault();
-   d.onclick=()=>{if(longFired){longFired=false;return}play(x,y)};d.onmouseenter=()=>preview(x,y);d.onmouseleave=clearPreview}
+  if(!c){d.className+=' slot';B.appendChild(d);return}
+  const k=kind(c);d.className+=' tile'+(k==='split'||k==='arrow'?'':' '+(k==='rot'?'rotable':k));
+  d.innerHTML=(k==='delay'?HG:'')+svgFor(c)+`<span class="pc">${c.p+1}</span>`+(k==='delay'?'<span class="dl">+1 beat</span>':'')+(k==='mute'?'<span class="badge" style="background:#05040c;padding:0 3px;border-radius:4px">×2</span>':'');
+  d.style.setProperty('--h',HUE[c.p]);d.dataset.p=c.p;
+  if(k==='rot'){const b=document.createElement('div');b.className='rot';b.textContent='↻';b.title='Rotate clockwise (right-click / long-press tile: counter-clockwise)';
+   b.onpointerdown=e=>e.stopPropagation();b.onclick=e=>{e.stopPropagation();turn(x,y,1)};d.appendChild(b);
+   d.oncontextmenu=e=>{e.preventDefault();clearTimeout(LP);if(!longFired)turn(x,y,3)};
+   d.onpointerdown=e=>{longFired=false;if(e.button)return;clearTimeout(LP);LP=setTimeout(()=>{LP=null;longFired=true;turn(x,y,3)},450)};d.onpointerup=d.onpointerleave=()=>{clearTimeout(LP)}}
+  else d.oncontextmenu=e=>e.preventDefault();
+  d.onclick=()=>{if(longFired){longFired=false;return}play(x,y)};d.onmouseenter=()=>preview(x,y);d.onmouseleave=clearPreview;
   B.appendChild(d)}))}
 let LP=null,longFired=false;
 const HG='<svg class="hg" viewBox="0 0 24 24" fill="#ffb02e"><path d="M6 2h12v2c0 4-4 6-4 8s4 4 4 8v2H6v-2c0-4 4-6 4-8S6 8 6 4z"/></svg>';
 // k=1 clockwise, k=3 counter-clockwise; history stores the step so undo inverts it
-function turn(x,y,k){if(busy)return;const c=grid[y][x];for(let i=0;i<k;i++)rotate(c);history.push([x,y,k]);thud();render();preview(x,y)}
+function turn(x,y,k){clearTimeout(LP);if(busy)return;const c=grid[y][x];for(let i=0;i<k;i++)rotate(c);history.push([x,y,k]);thud();render();preview(x,y)}
 function clearPreview(){document.querySelectorAll('.ghost').forEach(e=>e.classList.remove('ghost'))}
-function preview(x,y){if(busy)return;clearPreview();const c=grid[y][x];if(!c)return;
- // show only the tiles this tile directly reaches next: teaches without solving
- const DIRS={'>':[1,0],'<':[-1,0],'^':[0,-1],'v':[0,1]};const ds=c.t==='S-'?['<','>']:c.t==='S|'?['^','v']:[c.t[c.t.length-1]];
- ds.forEach(d=>{let [dx,dy]=DIRS[d],a=x+dx,b=y+dy;while(grid[b]&&a>=0&&a<grid[0].length&&!grid[b][a]){a+=dx;b+=dy}if(grid[b]&&grid[b][a])document.getElementById(`c${a}_${b}`).classList.add('ghost')})}
-function wave(el){const w=document.createElement('div');w.className='wave';w.style.left='50%';w.style.top='50%';w.style.setProperty('--h',el.style.getPropertyValue('--h'));el.appendChild(w);setTimeout(()=>w.remove(),900)}
-function play(x,y){if(busy)return;busy=true;clearPreview();ac();const {ev,solved}=simulate(grid,x,y);const BEAT=180;let n=0;
- ev.forEach(e=>setTimeout(()=>{const el=document.getElementById(`c${e.x}_${e.y}`);if(e.muted){el.classList.add('muted-hit');thud();return}
-  document.querySelectorAll('.rung:not(.past)').forEach(t=>{if(+t.dataset.beat<e.beat)t.classList.add('past')});el.dataset.beat=e.beat;el.classList.add('rung');const bn=document.createElement('span');bn.className='beatno';bn.textContent=kind(grid[e.y][e.x])==='delay'?`${e.beat+1}→${e.beat+2}`:e.beat+1;el.appendChild(bn);wave(el);note(n++);if(navigator.vibrate)navigator.vibrate(12)},e.beat*BEAT));
- const end=(ev.length?ev[ev.length-1].beat:0)*BEAT+500;
- setTimeout(()=>{if(solved)win();else fail(ev)},end)}
-// failed chain: pulse the tiles that never rang + "N tiles silent" for ~1.2s, then reset
-function fail(ev){const rung=new Set(ev.filter(e=>!e.muted).map(e=>e.x+','+e.y));let n=0;
- grid.forEach((r,y)=>r.forEach((c,x)=>{if(c&&!rung.has(x+','+y)){n++;document.getElementById(`c${x}_${y}`).classList.add('silent')}}));
- const m=document.getElementById('msg');m.textContent=`${n} tile${n===1?'':'s'} silent`;m.classList.add('show');m.removeAttribute('aria-hidden');
- setTimeout(()=>{m.classList.remove('show');m.textContent='';m.setAttribute('aria-hidden','true');document.querySelectorAll('.rung').forEach(e=>{e.style.transition='background 1s';e.classList.remove('rung','past')});setTimeout(()=>{busy=false;render()},700)},1200)}
-function win(){[0,4,7,12].forEach((s,i)=>{if(soundOn){note([0,2,3,5][i],i*.06,.18,2.4)}});
- const f=document.getElementById('flash');f.style.opacity=1;setTimeout(()=>f.style.opacity=0,500);
- document.querySelectorAll('.tile').forEach((t,i)=>setTimeout(()=>{t.animate([{transform:'scale(1)'},{transform:'scale(1.05)'},{transform:'scale(1)'}],{duration:400});wave(t)},i*40));
- if(!done.includes(li)){done.push(li);localStorage.resDone=JSON.stringify(done)}
- setTimeout(()=>{const w=document.getElementById('win');w.style.display='flex';document.getElementById('next').textContent=li<LEVELS.length-1?'Next ›':'Play again'},1100)}
+function preview(x,y){if(busy)return;clearPreview();if(!grid[y][x])return;
+ targets(grid,x,y).forEach(([a,b])=>document.getElementById(`c${a}_${b}`).classList.add('ghost'))}
+function wave(el){const w=document.createElement('div');w.className='wave';w.style.left='50%';w.style.top='50%';w.style.setProperty('--h',el.style.getPropertyValue('--h'));el.appendChild(w);later(()=>w.remove(),900)}
+function play(x,y){if(busy)return;busy=true;clearPreview();ac();const r=simulate(grid,x,y),ev=r.ev,tgt=LEVELS[li].melody;
+ document.querySelectorAll('#strip .col').forEach(c=>c.classList.remove('ok','bad','hl'));
+ const beats=Math.max(r.melody.length,tgt.length);
+ for(let b=0;b<beats;b++){const here=ev.filter(e=>e.beat===b);
+  later(()=>{const good=chordEq(r.melody[b]||[],tgt[b]||[]);const col=document.getElementById('b'+b);if(col)col.classList.add(good?'ok':'bad');
+   here.forEach(e=>{const el=document.getElementById(`c${e.x}_${e.y}`),c=grid[e.y][e.x];if(e.muted){el.classList.add('muted-hit');thud();return}
+    document.querySelectorAll('.rung:not(.past)').forEach(t=>{if(+t.dataset.beat<e.beat)t.classList.add('past')});el.dataset.beat=e.beat;el.classList.add('rung');
+    const bn=document.createElement('span');bn.className='beatno';bn.textContent=kind(c)==='delay'?`${e.beat+1}→${e.beat+2}`:e.beat+1;el.appendChild(bn);wave(el);note(c.p);if(!good)clash(c.p)});
+   if(!good&&!here.some(e=>!e.muted))clash((tgt[b]||[0])[0]);   // a missing note is wrong too
+   if(navigator.vibrate)navigator.vibrate(good?12:[30,20,30])},b*BEAT)}
+ const won=r.solved&&melodyEq(r.melody,tgt);
+ later(()=>{if(won)win();else fail(r)},(beats-1)*BEAT+500)}
+// failed chain: pulse silent tiles, "N tiles silent · melody off at beat N" for ~1.2s, then reset
+function fail(r){const rung=new Set(r.ev.filter(e=>!e.muted).map(e=>e.x+','+e.y));let n=0;
+ grid.forEach((row,y)=>row.forEach((c,x)=>{if(c&&!rung.has(x+','+y)){n++;document.getElementById(`c${x}_${y}`).classList.add('silent')}}));
+ const wb=firstWrongBeat(r.melody,LEVELS[li].melody);const parts=[];if(n)parts.push(`${n} tile${n===1?'':'s'} silent`);if(wb>=0)parts.push(`melody off at beat ${wb+1}`);
+ const m=document.getElementById('msg');m.textContent=parts.join(' · ');m.classList.add('show');m.removeAttribute('aria-hidden');
+ later(()=>{m.classList.remove('show');m.textContent='';m.setAttribute('aria-hidden','true');document.querySelectorAll('.rung').forEach(e=>{e.style.transition='background 1s';e.classList.remove('rung','past')});
+  later(()=>{busy=false;render();document.querySelectorAll('#strip .col').forEach(c=>c.classList.remove('ok','bad'))},700)},1200)}
+function win(){if(soundOn)[0,2,4,5].forEach((p,i)=>note(p,i*.06,.18,2.4));
+ const f=document.getElementById('flash');f.style.opacity=1;later(()=>f.style.opacity=0,500);
+ document.querySelectorAll('.tile').forEach((t,i)=>later(()=>{t.animate([{transform:'scale(1)'},{transform:'scale(1.05)'},{transform:'scale(1)'}],{duration:400});wave(t)},i*40));
+ if(!done.includes(li)){done.push(li);localStorage[KEY+'Done']=JSON.stringify(done)}
+ later(()=>{const w=document.getElementById('win');w.style.display='flex';document.getElementById('next').textContent=li<LEVELS.length-1?'Next ›':'Play again'},1100)}
 document.getElementById('next').onclick=()=>{document.getElementById('win').style.display='none';load(li<LEVELS.length-1?li+1:0)};
-document.getElementById('restart').onclick=()=>{if(!busy)load(li)};
+document.getElementById('restart').onclick=()=>load(li);   // allowed any time: cancels a running chain
+document.getElementById('listen').onclick=listen;
 document.getElementById('undo').onclick=()=>{if(busy||!history.length)return;const [x,y,k]=history.pop();for(let i=0;i<4-k;i++)rotate(grid[y][x]);render()};
 document.getElementById('sound').onclick=e=>{soundOn=!soundOn;e.target.textContent=soundOn?'🔊':'🔇'};
-addEventListener('keydown',e=>{if(e.key==='r')document.getElementById('restart').click();if(e.key==='z')document.getElementById('undo').click()});
+addEventListener('keydown',e=>{if(e.key==='r')document.getElementById('restart').click();if(e.key==='z')document.getElementById('undo').click();if(e.key==='l')listen()});
 addEventListener('resize',()=>{if(!busy)render()});
 // fresh load: first unsolved level (level 1 for new players); dots remain the level picker
 const firstOpen=LEVELS.findIndex((_,j)=>!done.includes(j));load(firstOpen<0?0:firstOpen);
