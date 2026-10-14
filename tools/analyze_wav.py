@@ -1,7 +1,7 @@
 # Analyses level3_solve.wav / level3_decoy.wav: peak dBFS, onsets vs 180ms beat grid, per-beat pitch vs melody,
 # and a "clash" metric (share of spectral energy that is NOT on the pentatonic scale or its harmonics).
 import numpy as np,json,wave
-E=json.load(open('tools/level3_expected.json'));SCALE=[0,2,4,7,9,12,14,16];BASE=220.0;BEAT=.18
+E=json.load(open('tools/level3_expected.json'));SCALE=[0,2,4,7,9,12];BASE=220.0;BEAT=.18
 fr=lambda p:BASE*2**(SCALE[p]/12)
 def load(f):
   w=wave.open(f);SR=w.getframerate();return np.frombuffer(w.readframes(w.getnframes()),dtype=np.int16)/32768.0,SR
@@ -21,7 +21,7 @@ def buzz(seg,SR):
 def offscale(seg,SR):
   S=np.abs(np.fft.rfft(seg*np.hanning(len(seg)),8*len(seg)))**2;f=np.fft.rfftfreq(8*len(seg),1/SR);m=(f>150)&(f<4000)
   ok=np.zeros_like(f,bool)
-  for p in range(8):
+  for p in range(len(SCALE)):
     for h in range(1,6):ok|=np.abs(f-fr(p)*h)<np.maximum(14,fr(p)*h*(2**(35/1200)-1))
   return S[m&~ok].sum()/S[m].sum()
 for k in ['solve','decoy']:

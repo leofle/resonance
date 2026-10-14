@@ -55,7 +55,7 @@ outer:while(Date.now()-t0<T){it++;const n=rnd(sp.n),nD=rnd(sp.D),nM=rnd(sp.M);
  const tgt=cov.find(c=>c.x===tx&&c.y===ty&&c.ks.every((k,i)=>k===want[i]));if(!tgt)continue;
  if(tgt.melody.length<sp.beats[0]||tgt.melody.length>sp.beats[1])continue;
  // pitch assignment
- for(let tries=0;tries<300;tries++){const P=g.map(r=>r.map(()=>Math.floor(Math.random()*8)));
+ for(let tries=0;tries<300;tries++){const P=g.map(r=>r.map(()=>Math.floor(Math.random()*E.SCALE.length)));
   const cv=coverage(g,P);const T=cv.find(c=>c.x===tx&&c.y===ty&&c.ks.every((k,i)=>k===want[i]));
   const others=cv.filter(c=>c!==T);if(others.some(c=>E.melodyEq(c.melody,T.melody)))continue;
   // chords must not repeat the same pitch twice (would be inaudible as a chord)

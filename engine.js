@@ -2,14 +2,14 @@
 // Board: always 6x6. Token = "<type>:<pitch>" or "." for empty.
 //   type: ">" "<" "^" "v" arrow | "S-" split left+right | "S|" split up+down
 //         "D?" delay arrow (passes the ring on 2 beats later) | "M?" mute arrow | "R?" rotatable arrow
-//   pitch: 0..7, index into the pentatonic SCALE; a fixed property of the tile.
+//   pitch: 0..5, index into the pentatonic SCALE (6 levels); a fixed property of the tile.
 // Rules: tap one tile (beat 0). A ringing tile sends a ring in its direction(s) to the next tile
 // (skipping empties), arriving one beat later (two for delay). Each tile rings once.
 // Mute tiles ring only when TWO OR MORE rings arrive on the SAME beat; a lone ring is absorbed.
 // Melody of a chain = for each beat 0..last, the sorted pitches of tiles that ring on that beat.
 // Level is won when every tile rings AND the chain's melody equals the level's target melody.
 const N=6;
-const SCALE=[0,2,4,7,9,12,14,16];           // semitones above BASE_HZ (major pentatonic, 1.5 octaves)
+const SCALE=[0,2,4,7,9,12];                 // semitones above BASE_HZ (major pentatonic, 6 levels: one octave + top tonic)
 const BASE_HZ=220;
 const DIRS={'>':[1,0],'<':[-1,0],'^':[0,-1],'v':[0,1]};
 const ROT={'>':'v','v':'<','<':'^','^':'>'};
