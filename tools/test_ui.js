@@ -35,6 +35,58 @@ const FIND=`(want)=>{const P=[];grid.forEach((r,y)=>r.forEach((c,x)=>{if(c&&kind
  // restart during a running chain cancels it
  const any=(await find('silent'))[0];await p.click(`#c${any.x}_${any.y}`);await p.waitForTimeout(100);await p.click('#restart');await p.waitForTimeout(1500);
  ok(await p.evaluate(()=>!busy&&!document.querySelector('.rung')&&!msg.textContent),'restart mid-chain cancels the chain');
+ // v2.2: no pitch digits anywhere on the strip or the tiles (marker labels "+1 beat" / "×2" are not pitch), no data-p leak
+ for(let i=0;i<10;i++){await go(i);const r=await p.evaluate(()=>{const st=document.getElementById('strip');
+   const tileTxt=[...document.querySelectorAll('.tile')].map(t=>{const c=t.cloneNode(true);c.querySelectorAll('.dl,.badge').forEach(e=>e.remove());return c.textContent}).join('');
+   const cols=[...st.querySelectorAll('.col')].map(c=>[...c.querySelectorAll('i')].map(b=>{const r=b.getBoundingClientRect();return{w:r.width,h:r.height,l:r.left,r:r.right}}));
+   return{strip:st.textContent,tileTxt,dp:document.querySelectorAll('[data-p]').length,pb:document.querySelectorAll('.pb').length,cols,H:st.getBoundingClientRect().height,
+    want:LEVELS[li].melody.map(ch=>ch.map(p=>PH(p)))}});
+  const sepOK=r.cols.every(c=>c.every((b,k)=>k===0||b.l>=c[k-1].r+2)&&c.every(b=>b.w>=10));
+  const hOK=r.cols.every((c,j)=>c.every((b,k)=>Math.abs(b.h-r.want[j][k]/100*(r.H-20))<2.5));
+  ok(!/\d/.test(r.strip)&&!/\d/.test(r.tileTxt)&&r.dp===0&&r.pb===0&&sepOK&&hOK&&r.H>=130,`L${i+1}: no digits on strip/tiles, no pitch shown before ringing, bars height=pitch, chord bars side by side (strip ${r.H}px)`)}
+ // pitch revealed after a tile rings; survives fail-reset + Restart; resets on level change
+ await go(0);const sol1=(await find('win'))[0];const wrong1=await p.evaluate(s=>{for(let y=0;y<N;y++)for(let x=0;x<N;x++)if(grid[y][x]&&!(x===s.x&&y===s.y))return{x,y}},sol1);
+ await p.click(`#c${wrong1.x}_${wrong1.y}`);await p.waitForTimeout(200);
+ const rungNow=await p.evaluate(()=>[...document.querySelectorAll('.tile.rung')].map(e=>e.id));
+ ok(rungNow.length>0&&await p.evaluate(ids=>ids.every(id=>document.querySelector('#'+id+' .pb')),rungNow),'pitch bar appears on a tile as soon as it rings');
+ await p.waitForFunction(()=>!busy,null,{timeout:8000});
+ const revealedIds=await p.evaluate(s=>{const r=simulate(grid,s.x,s.y);return[...new Set(r.ev.filter(e=>!e.muted).map(e=>`c${e.x}_${e.y}`))]},wrong1);
+ const chk=()=>p.evaluate(ids=>{const all=[...document.querySelectorAll('.tile')];const withPb=all.filter(t=>t.querySelector('.pb')).map(t=>t.id).sort();
+   const hOK=all.filter(t=>t.querySelector('.pb')).every(t=>{const [x,y]=t.id.slice(1).split('_').map(Number);return Math.abs(parseFloat(t.querySelector('.pb').style.height)-PH(grid[y][x].p)*.42)<.1});
+   return JSON.stringify(withPb)===JSON.stringify(ids.slice().sort())&&hOK},revealedIds);
+ ok(await chk(),`after the failed chain exactly the ${revealedIds.length} tiles that rang show their pitch bar (height = pitch)`);
+ await p.click('#restart');ok(await chk(),'revealed pitch bars persist after Restart');
+ await p.evaluate(()=>render());ok(await chk(),'revealed pitch bars persist across re-render');
+ await go(1);await go(0);ok(await p.evaluate(()=>document.querySelectorAll('.pb').length===0),'reveals reset on level change');
+ // pointer: real mouse clicks at each tile's bounding-box centre hit that tile on every level
+ for(let i=0;i<10;i++){await go(i);const miss=await p.evaluate(()=>[...document.querySelectorAll('.tile')].filter(t=>{const r=t.getBoundingClientRect();const e=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);return !e||e.closest('.tile')!==t}).map(t=>t.id));
+  ok(miss.length===0,`L${i+1}: elementFromPoint at every tile centre is that tile ${miss.join(',')}`)}
+ for(const L of [0,6]){await go(L);const s=(await find('win'))[0];await p.evaluate(s=>{s.P.forEach(([x,y],i)=>{for(let k=0;k<s.ks[i];k++)rotate(grid[y][x])});render()},s);
+  const bx=await (await p.$(`#c${s.x}_${s.y}`)).boundingBox();await p.mouse.move(0,0);await p.mouse.click(bx.x+bx.width/2,bx.y+bx.height/2);
+  await p.waitForTimeout(50);ok(await p.evaluate(s=>busy&&!!document.querySelector(`#c${s.x}_${s.y}.rung`),s),`L${L+1}: page.mouse.click at tile bbox centre starts the chain from that tile`);
+  await p.waitForSelector('#win',{state:'visible',timeout:10000});ok(true,`L${L+1}: coordinate click solves`);await p.evaluate(()=>{document.getElementById('win').style.display='none'})}
+ // touch: hasTouch context, tap a tile, tap the rotate badge, 600 ms touch hold = CCW
+ {const tc=await b.newContext({viewport:{width:412,height:860},hasTouch:true,isMobile:true,deviceScaleFactor:2});const tp=await tc.newPage();tp.on('pageerror',e=>errs.push('touch: '+e.message));
+  await tp.goto('http://localhost:8765/index.html');await tp.evaluate(()=>load(6));await tp.waitForTimeout(100);
+  const tt=()=>tp.evaluate(()=>grid.flat().map(c=>c?c.t:'.').join(' '));const T0=await tt();
+  const rid=await (await tp.$('.tile.rotable')).getAttribute('id');const rb=await (await tp.$(`#${rid} .rot`)).boundingBox();
+  await tp.touchscreen.tap(rb.x+rb.width/2,rb.y+rb.height/2);await tp.waitForTimeout(100);const T1=await tt();
+  ok(T1!==T0&&!(await tp.evaluate(()=>busy)),'touch tap on rotate badge rotates CW (no chain)');
+  const tb=await (await tp.$('#'+rid)).boundingBox();const cdp=await tc.newCDPSession(tp);const pt=[{x:tb.x+tb.width*.35,y:tb.y+tb.height*.6}];
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:pt});await tp.waitForTimeout(650);await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await tp.waitForTimeout(150);
+  ok(await tt()===T0&&!(await tp.evaluate(()=>busy)),'touch hold 650 ms on rotatable rotates CCW without playing');
+  const s=await tp.evaluate(`(${FIND})('win')`).then(a=>a[0]);await tp.evaluate(s=>{s.P.forEach(([x,y],i)=>{for(let k=0;k<s.ks[i];k++)rotate(grid[y][x])});render()},s);
+  const sb=await (await tp.$(`#c${s.x}_${s.y}`)).boundingBox();await tp.touchscreen.tap(sb.x+sb.width/2,sb.y+sb.height/2);await tp.waitForTimeout(50);
+  ok(await tp.evaluate(s=>busy&&!!document.querySelector(`#c${s.x}_${s.y}.rung`),s),'touch tap at tile centre starts the chain from that tile');
+  await tp.waitForSelector('#win',{state:'visible',timeout:10000});ok(true,'L7 solved by touch taps');await tc.close()}
+ // level dots: buttons with accessible names, aria-current on the current level, keyboard operable
+ await go(4);const dots=await p.evaluate(()=>[...document.querySelectorAll('#dots > *')].map(d=>({tag:d.tagName,label:d.getAttribute('aria-label'),cur:d.getAttribute('aria-current'),tab:d.tabIndex})));
+ const names=await p.evaluate(()=>LEVELS.map(l=>l.name));
+ ok(dots.length===10&&dots.every((d,j)=>d.tag==='BUTTON'&&d.label.startsWith(`Level ${j+1}: ${names[j]}`)&&d.tab===0&&(j===4?d.cur!==null:d.cur===null)),'dots are focusable buttons "Level N: Name", aria-current only on current');
+ const snap=await p.locator('#dots').ariaSnapshot();ok(/navigation "Levels"/.test(snap)&&(snap.match(/button "Level \d+: [^"]+"/g)||[]).length===10,'a11y tree: 10 named buttons in Levels nav');
+ await p.focus('#dots .dot[data-j="0"]');await p.keyboard.press('Tab');await p.keyboard.press('Tab');ok(await p.evaluate(()=>document.activeElement.dataset.j)==='2','Tab moves focus along the dots');
+ await p.keyboard.press('Enter');await p.waitForTimeout(60);ok(await p.evaluate(()=>li===2&&document.querySelector('#dots .dot[aria-current]').dataset.j==='2'),'Enter on a focused dot loads that level');
+ await p.keyboard.press(' ');await p.waitForTimeout(60);ok(await p.evaluate(()=>li===2),'Space on focused dot keeps working');
  // decoy: full coverage but wrong melody (level 3)
  await go(2);const dec=(await find('decoy'))[0];await applyAndTap(dec);await p.waitForSelector('#msg.show',{timeout:8000});
  const dm=await p.evaluate(()=>({t:msg.textContent,bad:document.querySelectorAll('#strip .col.bad').length,ok:document.querySelectorAll('#strip .col.ok').length,silent:document.querySelectorAll('.silent').length}));
@@ -53,7 +105,7 @@ const FIND=`(want)=>{const P=[];grid.forEach((r,y)=>r.forEach((c,x)=>{if(c&&kind
   if(L===5){await p.waitForTimeout(700);ok(await p.evaluate(()=>[...document.querySelectorAll('.tile.delay')].every(t=>{const b=t.querySelector('.beatno'),d=t.querySelector('.dl');if(!b)return true;const r1=b.getBoundingClientRect(),r2=d.getBoundingClientRect(),T=t.getBoundingClientRect();return r1.bottom<=r2.top&&r1.left>=T.left&&r1.right<=T.right})),'delay a→b pill inside tile, no overlap with +1 beat')}
   if(L===7){await p.waitForTimeout(600);await p.screenshot({path:'tools/shots/chain_L8.png'})}
   await p.waitForSelector('#win',{state:'visible',timeout:10000});ok(await p.evaluate(()=>!document.querySelector('#strip .col.ok,#strip .col.bad')),`level ${L+1} solved through UI (no strip marks)`);
-  if(L===0){await p.click('#dots i[data-j="2"]');ok(await p.evaluate(()=>li===2&&document.getElementById('win').style.display==='none'&&!busy),'level dot clickable over RESOLVED overlay');continue}
+  if(L===0){await p.click('#dots .dot[data-j="2"]');ok(await p.evaluate(()=>li===2&&document.getElementById('win').style.display==='none'&&!busy),'level dot clickable over RESOLVED overlay');continue}
   await p.click('#next');await p.waitForTimeout(50);ok(await p.evaluate(()=>li)===(L+1)%10,'Next advances (Play again wraps)')}
  ok(await p.evaluate(()=>!!MASTER),'master gain + limiter chain created');
  const fav=await p.request.get('http://localhost:8765/favicon.ico');ok(fav.status()===200,'favicon.ico served (200)');
