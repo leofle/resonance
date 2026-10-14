@@ -42,6 +42,11 @@ h1{margin:0;font-weight:300;letter-spacing:.4em;font-size:16px}
 @keyframes silent{from{box-shadow:inset 0 0 0 4px #ff3b5c,0 0 0 2px #fff}to{box-shadow:inset 0 0 0 4px #fff,0 0 0 2px #ff3b5c}}
 #msg{min-height:22px;margin:4px 0 4px;font-size:15px;font-weight:800;letter-spacing:.03em;color:#ffb199;text-shadow:0 0 8px #ff6a4d88,0 1px 2px #000;opacity:0;transition:opacity .2s}#msg.show{opacity:1}
 .tile.muted-hit{box-shadow:inset 0 0 0 4px #ff5a7a,0 0 0 2px #000}
+.tile.sel{outline:3px solid #fff;outline-offset:2px;box-shadow:0 0 0 6px #8ef0ff88,0 0 18px 4px #8ef0ffaa!important;z-index:2}
+.tile.pv{animation:pv .35s ease-out}@keyframes pv{40%{transform:scale(1.07)}}
+#play{background:#8ef0ff;color:#0d0b1a;border:0;font-weight:800}#play:disabled{background:#ffffff14;color:#e9e6ff66;cursor:not-allowed}
+#pvc{align-self:center;font-size:13px;opacity:.85}#pvc[hidden]{display:none}
+#board:focus-visible{outline:2px solid #8ef0ff88;outline-offset:3px}
 .tile.ghost{box-shadow:inset 0 0 0 2px #8ef0ff88}
 .badge{position:absolute;font-size:12px;bottom:4px;right:6px;font-weight:700}
 .rot{position:absolute;top:2%;right:2%;width:28%;height:28%;border-radius:50%;background:#f7c948;color:#222;font-weight:800;font-size:calc(var(--s)*.24);line-height:calc(var(--s)*.28);text-align:center;cursor:pointer;box-shadow:0 2px 8px #0008;z-index:3}
@@ -64,8 +69,10 @@ button:hover{background:#ffffff22}
 #tune{margin:0 0 10px;max-width:100vw}
 #note{position:absolute;top:3px;right:7px;z-index:2;font-size:14px;line-height:16px;opacity:.75;pointer-events:none}
 #strip{position:relative;overflow:hidden;height:118px;padding:10px 0;touch-action:pan-y;cursor:pointer;outline-offset:3px;border-radius:14px;background:#05040c;box-shadow:inset 0 0 0 2px #ffffff40}
-#track{display:flex;align-items:flex-end;gap:6px;height:100%;padding:0 10px;width:max-content;transition:transform .25s ease-out;will-change:transform}
+#track{display:flex;align-items:flex-end;gap:6px;height:100%;padding:0 10px;width:max-content;min-width:100%;transition:transform .25s ease-out;will-change:transform}
 #track.drag{transition:none}
+#track.fill{gap:4px}#track.fill .col{flex:1 1 0;justify-content:center;padding:0 2px}
+#track.fill .col i{width:clamp(10px,calc((var(--cw) - 4px - 3px * (var(--nb) - 1)) / var(--nb)),26px)}
 #strip.more-r{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 34px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 34px),transparent)}
 #strip.more-l{-webkit-mask-image:linear-gradient(90deg,transparent,#000 34px);mask-image:linear-gradient(90deg,transparent,#000 34px)}
 #strip.more-l.more-r{-webkit-mask-image:linear-gradient(90deg,transparent,#000 34px,#000 calc(100% - 34px),transparent);mask-image:linear-gradient(90deg,transparent,#000 34px,#000 calc(100% - 34px),transparent)}
@@ -79,9 +86,9 @@ button:hover{background:#ffffff22}
 <header><h1>RESONANCE</h1><div id="lvl"></div><nav id="dots" aria-label="Levels"></nav></header>
 <div id="msg" aria-live="polite" aria-hidden="true"></div>
 <div id="tune"><div id="strip" role="button" tabindex="0" aria-label="Target melody: tap to play it (L)" title="Tap to play the tune (L)"><span id="note" aria-hidden="true">♪</span><div id="track"></div></div></div>
-<div id="stage"><div id="board"></div><div id="hintpop" role="status" aria-live="polite" hidden></div></div>
+<div id="stage"><div id="board" tabindex="0" aria-label="Board: arrow keys select a tile, P or Enter plays"></div><div id="hintpop" role="status" aria-live="polite" hidden></div></div>
 <button id="unlock" type="button">🔈 Tap to enable sound</button>
-<div id="bar"><button id="undo">↶ Undo</button><button id="restart">⟲ Restart</button><button id="sound">🔊</button><button id="help" aria-label="Show the hint" title="Hint">?</button></div>
+<div id="bar"><button id="play" disabled>▶ Play</button><span id="pvc" hidden></span><button id="undo">↶ Undo</button><button id="restart">⟲ Restart</button><button id="sound">🔊</button><button id="help" aria-label="Show the hint" title="Hint">?</button></div>
 <div id="flash"></div>
 <div id="win"><h2>RESOLVED</h2><button id="next">Next ›</button></div>
 <script>
@@ -129,7 +136,7 @@ function firstWrongBeat(m,t){const L=Math.max(m.length,t.length);for(let i=0;i<L
 const freq=p=>BASE_HZ*Math.pow(2,SCALE[p]/12);
 //if(typeof module!=='undefined')module.exports={N,SCALE,BASE_HZ,LEVELS,parse,simulate,kind,rotate,targets,melodyOf,chordEq,melodyEq,firstWrongBeat,freq};
 
-LEVELS.splice(0,LEVELS.length,...[{"name": "First Note", "hint": "Tap a tile: its ring follows the arrows, one tile per beat. Your chain plays the tune shown above.", "rows": [". v:3 . . <:0 .", "v:0 <:0 . . ^:3 .", ". . . . . .", ". . . . . .", "v:4 . . . . .", ">:1 . . . . ."], "melody": [[3], [0], [3], [0], [0], [4], [1]]}, {"name": "Gaps", "hint": "Rings leap over empty slots to the next tile in line.", "rows": [". . . . . .", ". . v:3 . . .", ". . . . . .", ">:5 . . . >:0 v:2", "^:4 . <:0 . . .", ". . . . . v:0"], "melody": [[3], [0], [4], [5], [0], [2], [0]]}, {"name": "Split", "hint": "A split tile always rings out of both its sides, whichever side the ring came in from. Several taps ring every tile, but only one plays the tune.", "rows": [". . . S-:1 . <:2", ". . . . . .", ". S|:5 S-:2 S|:3 . .", ". . S|:0 S|:3 . .", ". . S|:1 S-:5 . S-:2", ". . >:3 <:3 . ."], "melody": [[2], [3, 5], [1, 3], [2, 5], [1, 2], [0, 3], [3]]}, {"name": "Branches", "hint": "Many starts ring every tile. Listen: only one plays the tune.", "rows": ["S-:1 . v:3 . . .", "S|:0 S-:1 . . >:5 .", "S|:4 . S-:0 . S|:3 .", "S|:0 S|:2 . . . .", ">:1 S|:1 . . . .", ". . . . . ."], "melody": [[0], [1, 4], [0, 3], [0, 1], [1, 3], [2, 5], [1]]}, {"name": "Hush", "hint": "Striped tiles stay silent unless two rings hit them on the same beat; then they join the chord.", "rows": [". . . >:4 v:0 .", "S-:4 S-:4 . S|:0 M^:2 .", ". . . S-:1 S|:5 .", ". S|:4 S-:2 . . .", ". Mv:1 S|:2 . S-:4 S-:5", ". ^:0 <:4 . . ."], "melody": [[4], [0, 4], [1, 4], [0, 5], [2, 4], [2, 5], [2, 4], [0, 4], [1]]}, {"name": "Delay", "hint": "Hourglass tiles hold the ring one extra beat before passing it on.", "rows": [". D>:0 . >:4 . .", ". S|:3 . S-:1 S-:1 Dv:5", "^:0 S|:2 . . . .", ". . . . S|:1 v:0", "D^:1 S-:4 S-:3 . S|:1 .", ". . <:3 . D<:3 ."], "melody": [[1], [1, 3], [0, 2, 5], [4], [0, 1, 3, 4], [1], [0, 1, 3], [], [3]]}, {"name": "Turn", "hint": "Gold dials only turn: tap one to rotate it clockwise (right-click or hold to turn back). A dial can never start the chain, so tune the dials, then tap a plain tile.", "rows": ["S|:3 . . <:0 . .", ". . . ^:0 . .", ". . . . . .", ". . . S|:0 . .", "S|:5 S-:0 R>:4 S|:1 . .", ". . Rv:5 <:4 . ."], "melody": [[0], [0, 1], [0, 4], [3, 5], [4, 5], [0]]}, {"name": "Chorus", "hint": "Splits, silence, delay and a dial: count the beats. Dials turn when tapped; they never start the chain.", "rows": [". . . . . .", ". . S|:0 . S-:0 v:3", "M<:2 . . S-:1 S|:4 .", ". . . S|:2 . S-:5", "D^:4 <:3 S-:0 ^:1 . .", ". . ^:2 . Rv:4 ."], "melody": [[0], [0], [1, 3], [2, 4], [1], [2, 4], [0, 4], [2, 3], [5]]}, {"name": "Tuning", "hint": "Three dials. Every setting rings, only one sings. Dials turn when tapped; they never start the chain.", "rows": [". S-:5 . v:1 . .", "S|:3 S-:5 . . R^:4 R^:2", ". S|:3 <:3 S-:5 Rv:5 S|:0", "S-:1 . v:4 . <:2 .", "^:4 S-:1 . . ^:2 .", ". . . . . ."], "melody": [[5], [1], [5], [3, 5], [3, 4], [1, 2, 5], [0, 2, 3, 4], [1, 2], [4]]}, {"name": "Finale", "hint": "Everything you know, together. Dials turn when tapped; they never start the chain.", "rows": ["Rv:0 . S|:2 . . .", ". . v:3 . . S-:1", "S|:2 . S-:1 . S-:4 S|:1", "D>:2 . . >:5 R^:2 .", ". . . S|:4 . <:0", ". . <:2 S-:3 Mv:1 ."], "melody": [[1], [3], [1], [2, 4], [0, 1, 2], [0, 2], [4, 5], [2, 3], [1, 2]]}]);
+LEVELS.splice(0,LEVELS.length,...[{"name": "First Note", "hint": "Tap a tile to hear its note and select it. Press ▶ Play: the ring starts there and follows the arrows, one tile per beat. Your chain must play the tune shown above.", "rows": [". v:3 . . <:0 .", "v:0 <:0 . . ^:3 .", ". . . . . .", ". . . . . .", "v:4 . . . . .", ">:1 . . . . ."], "melody": [[3], [0], [3], [0], [0], [4], [1]]}, {"name": "Gaps", "hint": "Rings leap over empty slots to the next tile in line. Tap tiles to hear them before you Play.", "rows": [". . . . . .", ". . v:3 . . .", ". . . . . .", ">:5 . . . >:0 v:2", "^:4 . <:0 . . .", ". . . . . v:0"], "melody": [[3], [0], [4], [5], [0], [2], [0]]}, {"name": "Split", "hint": "A split tile always rings out of both its sides, whichever side the ring came in from. Several starts ring every tile, but only one plays the tune.", "rows": [". . . S-:1 . <:2", ". . . . . .", ". S|:5 S-:2 S|:3 . .", ". . S|:0 S|:3 . .", ". . S|:1 S-:5 . S-:2", ". . >:3 <:3 . ."], "melody": [[2], [3, 5], [1, 3], [2, 5], [1, 2], [0, 3], [3]]}, {"name": "Branches", "hint": "Many starts ring every tile. Listen: only one plays the tune.", "rows": ["S-:1 . v:3 . . .", "S|:0 S-:1 . . >:5 .", "S|:4 . S-:0 . S|:3 .", "S|:0 S|:2 . . . .", ">:1 S|:1 . . . .", ". . . . . ."], "melody": [[0], [1, 4], [0, 3], [0, 1], [1, 3], [2, 5], [1]]}, {"name": "Hush", "hint": "Striped tiles stay silent unless two rings hit them on the same beat; then they join the chord.", "rows": [". . . >:4 v:0 .", "S-:4 S-:4 . S|:0 M^:2 .", ". . . S-:1 S|:5 .", ". S|:4 S-:2 . . .", ". Mv:1 S|:2 . S-:4 S-:5", ". ^:0 <:4 . . ."], "melody": [[4], [0, 4], [1, 4], [0, 5], [2, 4], [2, 5], [2, 4], [0, 4], [1]]}, {"name": "Delay", "hint": "Hourglass tiles hold the ring one extra beat before passing it on.", "rows": [". D>:0 . >:4 . .", ". S|:3 . S-:1 S-:1 Dv:5", "^:0 S|:2 . . . .", ". . . . S|:1 v:0", "D^:1 S-:4 S-:3 . S|:1 .", ". . <:3 . D<:3 ."], "melody": [[1], [1, 3], [0, 2, 5], [4], [0, 1, 3, 4], [1], [0, 1, 3], [], [3]]}, {"name": "Turn", "hint": "Gold dials only turn: tap one to rotate it clockwise (right-click or hold to turn back). A dial can never start the chain: tune the dials, then select a plain tile and press ▶ Play.", "rows": ["S|:3 . . <:0 . .", ". . . ^:0 . .", ". . . . . .", ". . . S|:0 . .", "S|:5 S-:0 R>:4 S|:1 . .", ". . Rv:5 <:4 . ."], "melody": [[0], [0, 1], [0, 4], [3, 5], [4, 5], [0]]}, {"name": "Chorus", "hint": "Splits, silence, delay and a dial: count the beats. Dials turn when tapped; they never start the chain.", "rows": [". . . . . .", ". . S|:0 . S-:0 v:3", "M<:2 . . S-:1 S|:4 .", ". . . S|:2 . S-:5", "D^:4 <:3 S-:0 ^:1 . .", ". . ^:2 . Rv:4 ."], "melody": [[0], [0], [1, 3], [2, 4], [1], [2, 4], [0, 4], [2, 3], [5]]}, {"name": "Tuning", "hint": "Three dials. Every setting rings, only one sings. Dials turn when tapped; they never start the chain.", "rows": [". S-:5 . v:1 . .", "S|:3 S-:5 . . R^:4 R^:2", ". S|:3 <:3 S-:5 Rv:5 S|:0", "S-:1 . v:4 . <:2 .", "^:4 S-:1 . . ^:2 .", ". . . . . ."], "melody": [[5], [1], [5], [3, 5], [3, 4], [1, 2, 5], [0, 2, 3, 4], [1, 2], [4]]}, {"name": "Finale", "hint": "Everything you know, together. Dials turn when tapped; they never start the chain.", "rows": ["Rv:0 . S|:2 . . .", ". . v:3 . . S-:1", "S|:2 . S-:1 . S-:4 S|:1", "D>:2 . . >:5 R^:2 .", ". . . S|:4 . <:0", ". . <:2 S-:3 Mv:1 ."], "melody": [[1], [3], [1], [2, 4], [0, 1, 2], [0, 2], [4, 5], [2, 3], [1, 2]]}]);
 const HUE=[0,40,120,185,240,295];           // one colour per pitch (shared by tiles and the melody strip)
 const BEAT=180;
 let AC=null,soundOn=true,MASTER=null,TM=[];
@@ -189,7 +196,12 @@ function trackMax(){return Math.max(0,TR.scrollWidth-S.clientWidth)}
 function setTrack(x,anim=true){const m=trackMax();trackX=Math.max(0,Math.min(m,x));TR.classList.toggle('drag',!anim);TR.style.transform=`translateX(${-trackX}px)`;
  S.classList.toggle('more-l',trackX>1);S.classList.toggle('more-r',trackX<m-1)}
 function follow(i){const c=document.getElementById('b'+i);if(!c||!trackMax())return;setTrack(c.offsetLeft+c.offsetWidth/2-S.clientWidth/2)}
-function fitStrip(){S.style.width=B.offsetWidth+'px';setTrack(0)}
+// columns spread evenly over the full strip width when each would be >= 28px and wide enough for its chord; otherwise
+// natural fixed-width columns that scroll
+function fitStrip(){S.style.width=B.offsetWidth+'px';TR.classList.remove('fill');const cols=[...TR.children];const n=cols.length;
+ if(n){const avail=S.clientWidth-20-4*(n-1),cw=avail/n,need=Math.max(...cols.map(c=>{const k=c.children.length;return k?k*10+3*(k-1)+4:0}));   // bars may shrink to 10px in fill mode
+  if(cw>=28&&cw>=need){TR.classList.add('fill');TR.style.setProperty('--cw',cw+'px');cols.forEach(c=>c.style.setProperty('--nb',c.children.length))}}
+ setTrack(0)}
 // strip: drag/swipe scrolls; a clean tap (< 8px movement, < 400ms) replays the tune. Playback starts from the click
 // event (after touchend) so iOS treats it as a valid audio gesture.
 {let d=null,clean=false;S.addEventListener('pointerdown',e=>{d={x:e.clientX,y:e.clientY,t:trackX,at:performance.now(),moved:0};clean=false;if(trackMax())try{S.setPointerCapture(e.pointerId)}catch(_){}});
@@ -205,9 +217,9 @@ function seenHints(){try{return JSON.parse(localStorage[KEY+'Hints']||'[]')}catc
 function showHint(){HP.innerHTML=`${LEVELS[li].hint}<small>Tap to close · ? to reopen</small>`;HP.hidden=false}
 function hideHint(){HP.hidden=true}
 HP.addEventListener('click',e=>{e.stopPropagation();hideHint()});
-function load(i){clearTimers();shown=new Set();li=i;localStorage[KEY+'Lvl']=i;grid=parse(LEVELS[i]);history=[];busy=false;LP&&clearTimeout(LP);LP=null;longFired=false;
+function load(i){clearTimers();shown=new Set();sel=null;previewsLeft=PREVIEW_LIMIT;li=i;localStorage[KEY+'Lvl']=i;grid=parse(LEVELS[i]);history=[];busy=false;LP&&clearTimeout(LP);LP=null;longFired=false;
  const m=document.getElementById('msg');m.classList.remove('show');m.textContent='';m.setAttribute('aria-hidden','true');
- render();strip();fitStrip();
+ render();strip();fitStrip();playUI();
  document.getElementById('lvl').textContent=`${i+1} / ${LEVELS.length} · ${LEVELS[i].name.toUpperCase()}`;
  hideHint();if(HINT_AUTO.includes(i)&&!seenHints().includes(i)){localStorage[KEY+'Hints']=JSON.stringify([...seenHints(),i]);showHint()}
  document.getElementById('dots').innerHTML=LEVELS.map((L,j)=>`<button type="button" class="dot${done.includes(j)?' done':''}" data-j="${j}" aria-label="Level ${j+1}: ${L.name}${done.includes(j)?' (solved)':''}" title="Level ${j+1}: ${L.name}"${j===i?' aria-current="step"':''}></button>`).join('');
@@ -220,7 +232,7 @@ function listen(){if(busy)return;unlock();LT.forEach(clearTimeout);LT=[];clearSt
  cols.forEach((c,i)=>LT.push(later(()=>{clearStrip();c.classList.add('hl');follow(i)},i*BEAT)));LT.push(later(clearStrip,cols.length*BEAT));LT.push(later(()=>setTrack(0),cols.length*BEAT+400))}
 // board as large as the viewport allows: width minus board padding/gaps/margin, height minus header, strip and controls
 function gapPx(){return innerWidth<520?6:10}
-function tileSize(){const g=gapPx()*(N-1)+24,used=document.querySelector('header').offsetHeight+document.getElementById('msg').offsetHeight+document.getElementById('tune').offsetHeight+document.getElementById('bar').offsetHeight+10+8+10+14+16;
+function tileSize(){const g=gapPx()*(N-1)+24,used=document.querySelector('header').offsetHeight+document.getElementById('msg').offsetHeight+document.getElementById('tune').offsetHeight+document.getElementById('bar').offsetHeight+10+8+10+14+16+52;   // +52: room for the bottom "Tap to enable sound" banner
  return Math.max(34,Math.min(120,Math.floor((Math.min(innerWidth,1000)-g-12)/N),Math.floor((innerHeight-used-g)/N)))}
 function render(){clearTimeout(LP);const s=tileSize();
  B.style.setProperty('--s',s+'px');B.style.setProperty('--gap',gapPx()+'px');B.style.gridTemplateColumns=`repeat(${N},${s}px)`;B.innerHTML='';
@@ -234,9 +246,28 @@ function render(){clearTimeout(LP);const s=tileSize();
    d.oncontextmenu=e=>{e.preventDefault();clearTimeout(LP);if(!longFired)turn(x,y,3)};
    d.onpointerdown=e=>{longFired=false;if(e.button)return;clearTimeout(LP);LP=setTimeout(()=>{LP=null;longFired=true;turn(x,y,3)},450)};d.onpointerup=d.onpointerleave=()=>{clearTimeout(LP)}}
   else d.oncontextmenu=e=>e.preventDefault();
-  d.onclick=()=>{if(longFired){longFired=false;return}if(k==='rot'){turn(x,y,1);return}play(x,y)};   // dials only turn, never start a chaind.onmouseenter=()=>preview(x,y);d.onmouseleave=clearPreview;
+  // tap: dials rotate; any other tile is selected and previews its own note (no chain, no bar, not an attempt)
+  d.onclick=()=>{if(longFired){longFired=false;return}if(k==='rot'){turn(x,y,1);return}pick(x,y)};
+  d.onmouseenter=()=>preview(x,y);d.onmouseleave=clearPreview;
+  if(sel&&sel.x===x&&sel.y===y)d.classList.add('sel');
   B.appendChild(d)}))}
 let LP=null,longFired=false;
+// ---- selection + preview, ▶ Play runs the chain from the selected tile ----
+let PREVIEW_LIMIT=new URLSearchParams(location.search).get('preview');PREVIEW_LIMIT=PREVIEW_LIMIT?+PREVIEW_LIMIT:null;   // null = unlimited previews
+let sel=null,previewsLeft=null,attempts=0,previews=0;
+function selectable(x,y){const c=grid[y]&&grid[y][x];return !!c&&kind(c)!=='rot'}
+function setSel(x,y){document.querySelectorAll('.tile.sel').forEach(e=>e.classList.remove('sel'));sel=x==null?null:{x,y};
+ if(sel)document.getElementById(`c${x}_${y}`).classList.add('sel');playUI()}
+function pick(x,y){if(busy||!selectable(x,y))return;hideHint();setSel(x,y);
+ if(PREVIEW_LIMIT!=null){if(previewsLeft<=0){thud();playUI();return}previewsLeft--}
+ previews++;note(grid[y][x].p);const el=document.getElementById(`c${x}_${y}`);el.classList.remove('pv');void el.offsetWidth;el.classList.add('pv');playUI()}
+function playUI(){const b=document.getElementById('play');if(!b)return;b.disabled=!sel||busy;b.title=sel?'Ring the chain from the selected tile (P / Enter)':'Select a tile first: tap it to hear its note';
+ const c=document.getElementById('pvc');if(c){c.hidden=PREVIEW_LIMIT==null;c.textContent=PREVIEW_LIMIT==null?'':`👂 ${previewsLeft}`;c.title=`${previewsLeft} preview${previewsLeft===1?'':'s'} left this attempt`}}
+function playSel(){if(!sel||busy)return;attempts++;previewsLeft=PREVIEW_LIMIT;play(sel.x,sel.y)}
+function moveSel(dx,dy){if(busy)return;const T=[];grid.forEach((r,y)=>r.forEach((c,x)=>{if(selectable(x,y))T.push([x,y])}));if(!T.length)return;
+ if(!sel){const [x,y]=T[0];return pick(x,y)}let best=null,bd=1e9;
+ for(const [x,y] of T){const ax=x-sel.x,ay=y-sel.y;const along=ax*dx+ay*dy,side=Math.abs(ax*dy-ay*dx);if(along<=0)continue;const d=along+side*2.5;if(d<bd){bd=d;best=[x,y]}}
+ if(best)pick(best[0],best[1])}
 const PH=p=>Math.round(14+p*(62/(SCALE.length-1)));   // bar height % for pitch p (strip and tiles share the scale)
 const pbar=p=>`<span class="pb" style="height:${(PH(p)*.8).toFixed(1)}%"></span>`;
 function reveal(el,x,y,p){if(!el.querySelector('.pb'))el.insertAdjacentHTML('beforeend',pbar(p));shown.add(x+','+y)}
@@ -251,7 +282,7 @@ function clearPreview(){document.querySelectorAll('.ghost').forEach(e=>e.classLi
 function preview(x,y){if(busy)return;clearPreview();if(!grid[y][x])return;
  targets(grid,x,y).forEach(([a,b])=>document.getElementById(`c${a}_${b}`).classList.add('ghost'))}
 function wave(el){const w=document.createElement('div');w.className='wave';w.style.left='50%';w.style.top='50%';w.style.setProperty('--h',el.style.getPropertyValue('--h'));el.appendChild(w);later(()=>w.remove(),900)}
-function play(x,y){if(busy||kind(grid[y][x])==='rot')return;hideHint();busy=true;clearPreview();ac();const r=simulate(grid,x,y),ev=r.ev,tgt=LEVELS[li].melody;
+function play(x,y){if(busy||kind(grid[y][x])==='rot')return;hideHint();setTimeout(playUI);busy=true;clearPreview();ac();const r=simulate(grid,x,y),ev=r.ev,tgt=LEVELS[li].melody;
  LT.forEach(clearTimeout);LT=[];clearStrip();hideBars();
  const beats=Math.max(r.melody.length,tgt.length);
  for(let b=0;b<beats;b++){const here=ev.filter(e=>e.beat===b);
@@ -269,7 +300,7 @@ function fail(r){const rung=new Set(r.ev.filter(e=>!e.muted).map(e=>e.x+','+e.y)
  const T=LEVELS[li].melody,right=T.filter((c,i)=>chordEq(r.melody[i]||[],c)).length;const parts=[`${right} of ${T.length} beats right`];if(n)parts.push(`${n} tile${n===1?'':'s'} silent`);
  const m=document.getElementById('msg');m.textContent=parts.join(' · ');m.classList.add('show');m.removeAttribute('aria-hidden');
  later(()=>{m.classList.remove('show');m.textContent='';m.setAttribute('aria-hidden','true');document.querySelectorAll('.rung').forEach(e=>{e.style.transition='background 1s';e.classList.remove('rung','past')});
-  later(()=>{busy=false;resetTiles()},700)},1200)}
+  later(()=>{busy=false;resetTiles();playUI()},700)},1200)}
 // back to the idle look in place (pitch bars of this attempt stay until the next attempt / Restart / rotate)
 function resetTiles(){setTrack(0);document.querySelectorAll('.tile').forEach(e=>{e.classList.remove('rung','past','silent','muted-hit');e.style.transition='';e.querySelectorAll('.beatno').forEach(b=>b.remove())})}
 function win(){if(soundOn)[0,2,4,5].forEach((p,i)=>note(p,i*.06,.18,2.4));
@@ -279,11 +310,15 @@ function win(){if(soundOn)[0,2,4,5].forEach((p,i)=>note(p,i*.06,.18,2.4));
  later(()=>{const w=document.getElementById('win');w.style.display='flex';document.getElementById('next').textContent=li<LEVELS.length-1?'Next ›':'Play again'},1100)}
 document.getElementById('next').onclick=()=>{document.getElementById('win').style.display='none';load(li<LEVELS.length-1?li+1:0)};
 document.getElementById('restart').onclick=()=>load(li);   // allowed any time: cancels a running chain
+document.getElementById('play').onclick=playSel;
 document.getElementById('help').onclick=()=>HP.hidden?showHint():hideHint();
 document.getElementById('undo').onclick=()=>{if(busy||!history.length)return;const [x,y,k]=history.pop();for(let i=0;i<4-k;i++)rotate(grid[y][x]);hideBars();refreshTile(x,y)};
 document.getElementById('sound').onclick=()=>{if(soundOn&&!audioReady()){unlock();return}soundOn=!soundOn;soundUI()};
 document.getElementById('unlock').onclick=()=>{unlock();soundOn=true;soundUI();setTimeout(()=>{if(!busy)listen()},60)};
-addEventListener('keydown',e=>{if(e.key==='r')document.getElementById('restart').click();if(e.key==='z')document.getElementById('undo').click();if(e.key==='l')listen()});
+addEventListener('keydown',e=>{const tg=e.target;const onCtl=tg&&tg.closest&&tg.closest('button,#strip,[role=button]');
+ if(e.key.startsWith('Arrow')){const m={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]}[e.key];if(!onCtl||tg===B){e.preventDefault();moveSel(...m)}}
+ if(e.key==='p'||e.key==='P'||(e.key==='Enter'&&!onCtl))playSel();
+ if(e.key==='r')document.getElementById('restart').click();if(e.key==='z')document.getElementById('undo').click();if(e.key==='l')listen()});
 addEventListener('resize',()=>{if(!busy)render();fitStrip()});
 // fresh load: first unsolved level (level 1 for new players); dots remain the level picker
 const firstOpen=LEVELS.findIndex((_,j)=>!done.includes(j));load(firstOpen<0?0:firstOpen);

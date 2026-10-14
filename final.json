@@ -1,7 +1,7 @@
 [
 {
 "name": "First Note",
-"hint": "Tap a tile: its ring follows the arrows, one tile per beat. Your chain plays the tune shown above.",
+"hint": "Tap a tile to hear its note and select it. Press ▶ Play: the ring starts there and follows the arrows, one tile per beat. Your chain must play the tune shown above.",
 "rows": [
 ". v:3 . . <:0 .",
 "v:0 <:0 . . ^:3 .",
@@ -36,7 +36,7 @@
 },
 {
 "name": "Gaps",
-"hint": "Rings leap over empty slots to the next tile in line.",
+"hint": "Rings leap over empty slots to the next tile in line. Tap tiles to hear them before you Play.",
 "rows": [
 ". . . . . .",
 ". . v:3 . . .",
@@ -71,7 +71,7 @@
 },
 {
 "name": "Split",
-"hint": "A split tile always rings out of both its sides, whichever side the ring came in from. Several taps ring every tile, but only one plays the tune.",
+"hint": "A split tile always rings out of both its sides, whichever side the ring came in from. Several starts ring every tile, but only one plays the tune.",
 "rows": [
 ". . . S-:1 . <:2",
 ". . . . . .",
@@ -246,7 +246,7 @@
 },
 {
 "name": "Turn",
-"hint": "Gold dials only turn: tap one to rotate it clockwise (right-click or hold to turn back). A dial can never start the chain, so tune the dials, then tap a plain tile.",
+"hint": "Gold dials only turn: tap one to rotate it clockwise (right-click or hold to turn back). A dial can never start the chain: tune the dials, then select a plain tile and press ▶ Play.",
 "rows": [
 "S|:3 . . <:0 . .",
 ". . . ^:0 . .",
