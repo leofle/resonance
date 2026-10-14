@@ -54,19 +54,18 @@ button:hover{background:#ffffff22}
 #win h2{font-weight:300;letter-spacing:.3em;font-size:30px;margin:0 0 20px}
 #flash{position:fixed;inset:0;pointer-events:none;background:radial-gradient(circle,#8ef0ff55,transparent 60%);opacity:0;transition:opacity .8s}
 #dots{display:flex;gap:6px;margin-top:8px;justify-content:center}
-#dots i{width:8px;height:8px;border-radius:50%;background:#ffffff22;cursor:pointer}
-#dots i.done{background:#8ef0ff}#dots i.cur{outline:2px solid #fff}
+#dots .dot{width:14px;height:14px;padding:0;border:3px solid transparent;background-clip:content-box;border-radius:50%;background-color:#ffffff33;cursor:pointer}
+#dots .dot.done{background-color:#8ef0ff}#dots .dot[aria-current]{outline:2px solid #fff}#dots .dot:focus-visible{outline:3px solid #f7c948;outline-offset:2px}
 #tune{display:flex;align-items:center;gap:12px;margin:0 0 14px}
-#strip{display:flex;gap:4px;height:112px;padding:4px 6px;border-radius:12px;background:#ffffff08;box-shadow:inset 0 0 0 1px #ffffff14}
-#strip .col{position:relative;width:26px;border-radius:6px;transition:background .15s}
-#strip .col .bn{position:absolute;top:1px;left:0;right:0;text-align:center;font-size:9px;opacity:.5}
-#strip .col i{position:absolute;left:3px;width:20px;height:11px;border-radius:6px;background:hsl(var(--h),75%,60%);font:700 9px/11px system-ui;font-style:normal;text-align:center;color:#111}
-#strip .col.hl{background:#ffffff22}
+#strip{display:flex;align-items:flex-end;gap:6px;height:136px;will-change:transform;padding:10px 10px;border-radius:14px;background:#05040c;box-shadow:inset 0 0 0 2px #ffffff40}
+#strip .col{position:relative;height:100%;display:flex;align-items:flex-end;gap:3px;padding:0 4px;border-radius:8px;background:#ffffff0d;box-shadow:inset 0 -2px 0 #ffffff55;transition:background .15s}
+#strip .col i{display:block;width:14px;border-radius:4px 4px 1px 1px;background:hsl(var(--h),95%,62%);box-shadow:0 0 0 1.5px #05040c,0 0 0 2.5px #ffffffcc}
+#strip .col.hl{background:#ffffff40}
 .slot{background:#ffffff05;box-shadow:inset 0 0 0 1px #ffffff0d;border-radius:12px}
-.tile{border-bottom:4px solid hsl(var(--h),70%,58%)}
-.pc{position:absolute;top:3px;left:4px;font:700 10px/14px system-ui;min-width:14px;text-align:center;border-radius:7px;background:hsl(var(--h),70%,58%);color:#111;z-index:3}
+/* pitch bar: hidden until the tile has rung once in this level; height = pitch */
+.pb{position:absolute;left:5px;bottom:5px;width:7px;border-radius:3px 3px 1px 1px;background:hsl(var(--h),95%,62%);box-shadow:0 0 0 1.5px #05040c,0 0 0 2.5px #fffc;z-index:3;pointer-events:none}
 </style></head><body>
-<header><h1>RESONANCE</h1><div id="lvl"></div><div id="dots"></div></header>
+<header><h1>RESONANCE</h1><div id="lvl"></div><nav id="dots" aria-label="Levels"></nav></header>
 <div id="hint"></div><div id="msg" aria-live="polite" aria-hidden="true"></div>
 <div id="tune"><button id="listen" title="Play the target melody (L)">♪ Listen</button><div id="strip" aria-label="Target melody"></div></div>
 <div id="board"></div>
@@ -76,7 +75,7 @@ button:hover{background:#ffffff22}
 <script>
 __ENGINE__
 LEVELS.splice(0,LEVELS.length,...__LEVELS__);
-const HUE=[0,28,52,120,175,205,255,300];           // one colour per pitch (shared by tiles and the melody strip)
+const HUE=[0,40,120,185,240,295];           // one colour per pitch (shared by tiles and the melody strip)
 const BEAT=180;
 let AC=null,soundOn=true,MASTER=null,TM=[];
 const later=(f,ms)=>{const t=setTimeout(f,ms);TM.push(t);return t};
@@ -84,7 +83,7 @@ function clearTimers(){TM.forEach(clearTimeout);TM=[]}
 function master(a){// master gain -> limiter so dense chains never clip
  const g=a.createGain();g.gain.value=.7;const c=a.createDynamicsCompressor();c.threshold.value=-10;c.knee.value=6;c.ratio.value=12;c.attack.value=.003;c.release.value=.25;g.connect(c);c.connect(a.destination);return g}
 function ac(){if(!AC){AC=new (window.AudioContext||window.webkitAudioContext)();MASTER=master(AC)}if(AC.state==='suspended')AC.resume();return AC}
-// tile note: pitch index p (0..7) -> pentatonic frequency (engine freq())
+// tile note: pitch index p (0..5) -> pentatonic frequency (engine freq())
 function note(p,t=0,vol=.22,dur=1.4){if(!soundOn)return;const a=ac(),o=a.createOscillator(),o2=a.createOscillator(),g=a.createGain(),f=freq(p);
  o.type='sine';o2.type='triangle';o.frequency.value=f;o2.frequency.value=f*2;const s=a.currentTime+t;
  g.gain.setValueAtTime(0,s);g.gain.linearRampToValueAtTime(vol,s+.01);g.gain.exponentialRampToValueAtTime(.0001,s+dur);
@@ -100,27 +99,28 @@ function svgFor(c){const k=kind(c);const sw='stroke="#e9e6ff" stroke-width="2.4"
  if(k==='split'){const r=c.t==='S|'?90:0;return `<svg viewBox="0 0 24 24" ${sw} style="transform:rotate(${r}deg)"><path d="M2 12h20M6 8l-4 4 4 4M18 8l4 4-4 4"/></svg>`}
  const d=c.t[c.t.length-1];return `<svg viewBox="0 0 24 24" ${sw} style="transform:rotate(${ARROW[d]}deg)"><path d="M4 12h15M13 6l6 6-6 6"/></svg>`}
 const KEY='res2';   // v2 levels: fresh progress key
+let revealed=new Set(),revLvl=-1;   // tiles that have rung at least once in this level (kept across retries/restarts)
 let li=0,grid,history=[],busy=false,done=JSON.parse(localStorage[KEY+'Done']||'[]');
 const B=document.getElementById('board'),S=document.getElementById('strip');
-function load(i){clearTimers();li=i;localStorage[KEY+'Lvl']=i;grid=parse(LEVELS[i]);history=[];busy=false;LP&&clearTimeout(LP);LP=null;longFired=false;
+function load(i){clearTimers();if(i!==revLvl){revealed=new Set();revLvl=i}li=i;localStorage[KEY+'Lvl']=i;grid=parse(LEVELS[i]);history=[];busy=false;LP&&clearTimeout(LP);LP=null;longFired=false;
  const m=document.getElementById('msg');m.classList.remove('show');m.textContent='';m.setAttribute('aria-hidden','true');
  render();strip();
  document.getElementById('lvl').textContent=`${i+1} / ${LEVELS.length} · ${LEVELS[i].name.toUpperCase()}`;
  document.getElementById('hint').textContent=LEVELS[i].hint;
- document.getElementById('dots').innerHTML=LEVELS.map((_,j)=>`<i class="${done.includes(j)?'done':''} ${j===i?'cur':''}" data-j="${j}" title="Level ${j+1}"></i>`).join('');
- document.querySelectorAll('#dots i').forEach(e=>e.onclick=()=>{document.getElementById('win').style.display='none';load(+e.dataset.j)});
+ document.getElementById('dots').innerHTML=LEVELS.map((L,j)=>`<button type="button" class="dot${done.includes(j)?' done':''}" data-j="${j}" aria-label="Level ${j+1}: ${L.name}${done.includes(j)?' (solved)':''}" title="Level ${j+1}: ${L.name}"${j===i?' aria-current="step"':''}></button>`).join('');
+ document.querySelectorAll('#dots .dot').forEach(e=>e.onclick=()=>{document.getElementById('win').style.display='none';load(+e.dataset.j)});
  if(AC)later(listen,350)}
-// melody strip: one column per beat, one dot per note (height + colour = pitch, number = pitch label on tiles)
-function strip(){const m=LEVELS[li].melody;S.innerHTML=m.map((ch,i)=>`<div class="col" id="b${i}"><span class="bn">${i+1}</span>${ch.map(p=>`<i style="--h:${HUE[p]};bottom:${6+p*11.5}px">${p+1}</i>`).join('')}</div>`).join('')}
+// melody strip: one column per beat, one bar per note (bar height + colour = pitch; chord notes side by side). No digits.
+function strip(){const m=LEVELS[li].melody;S.innerHTML=m.map((ch,i)=>`<div class="col" id="b${i}">${ch.map(p=>`<i style="--h:${HUE[p]};height:${PH(p)}%"></i>`).join('')}</div>`).join('')}
 function listen(){if(busy)return;ac();playMelody(LEVELS[li].melody);document.querySelectorAll('#strip .col').forEach((c,i)=>later(()=>{c.classList.add('hl');later(()=>c.classList.remove('hl'),BEAT)},i*BEAT))}
-function tileSize(){return Math.max(34,Math.min(68,Math.floor((Math.min(innerWidth,560)-24-50)/N),Math.floor((innerHeight-420)/N)-10))}
+function tileSize(){return Math.max(34,Math.min(68,Math.floor((Math.min(innerWidth,560)-24-50)/N),Math.floor((innerHeight-445)/N)-10))}
 function render(){clearTimeout(LP);const s=tileSize();
  B.style.setProperty('--s',s+'px');B.style.gridTemplateColumns=`repeat(${N},${s}px)`;B.innerHTML='';
  grid.forEach((r,y)=>r.forEach((c,x)=>{const d=document.createElement('div');d.className='cell';d.id=`c${x}_${y}`;
   if(!c){d.className+=' slot';B.appendChild(d);return}
   const k=kind(c);d.className+=' tile'+(k==='split'||k==='arrow'?'':' '+(k==='rot'?'rotable':k));
-  d.innerHTML=(k==='delay'?HG:'')+svgFor(c)+`<span class="pc">${c.p+1}</span>`+(k==='delay'?'<span class="dl">+1 beat</span>':'')+(k==='mute'?'<span class="badge" style="background:#05040c;padding:0 3px;border-radius:4px">×2</span>':'');
-  d.style.setProperty('--h',HUE[c.p]);d.dataset.p=c.p;
+  d.innerHTML=(k==='delay'?HG:'')+svgFor(c)+(revealed.has(x+','+y)?pbar(c.p):'')+(k==='delay'?'<span class="dl">+1 beat</span>':'')+(k==='mute'?'<span class="badge" style="background:#05040c;padding:0 3px;border-radius:4px">×2</span>':'');
+  d.style.setProperty('--h',HUE[c.p]);
   if(k==='rot'){const b=document.createElement('div');b.className='rot';b.textContent='↻';b.title='Rotate clockwise (right-click / long-press tile: counter-clockwise)';
    b.onpointerdown=e=>e.stopPropagation();b.onclick=e=>{e.stopPropagation();turn(x,y,1)};d.appendChild(b);
    d.oncontextmenu=e=>{e.preventDefault();clearTimeout(LP);if(!longFired)turn(x,y,3)};
@@ -129,6 +129,9 @@ function render(){clearTimeout(LP);const s=tileSize();
   d.onclick=()=>{if(longFired){longFired=false;return}play(x,y)};d.onmouseenter=()=>preview(x,y);d.onmouseleave=clearPreview;
   B.appendChild(d)}))}
 let LP=null,longFired=false;
+const PH=p=>Math.round(14+p*(62/(SCALE.length-1)));   // bar height % for pitch p (strip and tiles share the scale)
+const pbar=p=>`<span class="pb" style="height:${PH(p)*.42}%"></span>`;
+function reveal(el,x,y,p){const k=x+','+y;if(!el.querySelector('.pb'))el.insertAdjacentHTML('beforeend',pbar(p));revealed.add(k)}
 const HG='<svg class="hg" viewBox="0 0 24 24" fill="#ffb02e"><path d="M6 2h12v2c0 4-4 6-4 8s4 4 4 8v2H6v-2c0-4 4-6 4-8S6 8 6 4z"/></svg>';
 // k=1 clockwise, k=3 counter-clockwise; history stores the step so undo inverts it
 function turn(x,y,k){clearTimeout(LP);if(busy)return;const c=grid[y][x];for(let i=0;i<k;i++)rotate(c);history.push([x,y,k]);thud();render();preview(x,y)}
@@ -142,7 +145,7 @@ function play(x,y){if(busy)return;busy=true;clearPreview();ac();const r=simulate
  for(let b=0;b<beats;b++){const here=ev.filter(e=>e.beat===b);
   later(()=>{const good=chordEq(r.melody[b]||[],tgt[b]||[]);   // no visual per-beat mark: only the clash sound reveals which beat is wrong
    here.forEach(e=>{const el=document.getElementById(`c${e.x}_${e.y}`),c=grid[e.y][e.x];if(e.muted){el.classList.add('muted-hit');thud();return}
-    document.querySelectorAll('.rung:not(.past)').forEach(t=>{if(+t.dataset.beat<e.beat)t.classList.add('past')});el.dataset.beat=e.beat;el.classList.add('rung');
+    document.querySelectorAll('.rung:not(.past)').forEach(t=>{if(+t.dataset.beat<e.beat)t.classList.add('past')});el.dataset.beat=e.beat;el.classList.add('rung');reveal(el,e.x,e.y,c.p);
     const bn=document.createElement('span');bn.className='beatno';bn.textContent=kind(c)==='delay'?`${e.beat+1}→${e.beat+2}`:e.beat+1;el.appendChild(bn);wave(el);note(c.p);if(!good)clash(c.p)});
    if(!good&&!here.some(e=>!e.muted))clash((tgt[b]||[0])[0]);   // a missing note is wrong too
    if(navigator.vibrate)navigator.vibrate(good?12:[30,20,30])},b*BEAT)}
