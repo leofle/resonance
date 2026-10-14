@@ -2,7 +2,7 @@
 const {chromium}=require('playwright-core');
 const FIND=`(want)=>{const P=[];grid.forEach((r,y)=>r.forEach((c,x)=>{if(c&&kind(c)==='rot')P.push([x,y])}));const out=[];
  for(let m=0;m<4**P.length;m++){let mm=m;const ks=P.map(()=>{const k=mm%4;mm=Math.floor(mm/4);return k});P.forEach(([x,y],i)=>{for(let k=0;k<ks[i];k++)rotate(grid[y][x])});
-  for(let y=0;y<N;y++)for(let x=0;x<N;x++)if(grid[y][x]){const r=simulate(grid,x,y);const mel=melodyEq(r.melody,LEVELS[li].melody);
+  for(let y=0;y<N;y++)for(let x=0;x<N;x++)if(grid[y][x]&&kind(grid[y][x])!=='rot'){const r=simulate(grid,x,y);const mel=melodyEq(r.melody,LEVELS[li].melody);
    if(want==='win'&&r.solved&&mel||want==='decoy'&&r.solved&&!mel||want==='silent'&&!r.solved)out.push({x,y,P,ks})}
   P.forEach(([x,y],i)=>{for(let k=0;k<(4-ks[i])%4;k++)rotate(grid[y][x])})}return out}`;
 (async()=>{const b=await chromium.launch({executablePath:'/usr/bin/google-chrome',args:['--autoplay-policy=no-user-gesture-required']});
@@ -87,6 +87,12 @@ const FIND=`(want)=>{const P=[];grid.forEach((r,y)=>r.forEach((c,x)=>{if(c&&kind
  await p.focus('#dots .dot[data-j="0"]');await p.keyboard.press('Tab');await p.keyboard.press('Tab');ok(await p.evaluate(()=>document.activeElement.dataset.j)==='2','Tab moves focus along the dots');
  await p.keyboard.press('Enter');await p.waitForTimeout(60);ok(await p.evaluate(()=>li===2&&document.querySelector('#dots .dot[aria-current]').dataset.j==='2'),'Enter on a focused dot loads that level');
  await p.keyboard.press(' ');await p.waitForTimeout(60);ok(await p.evaluate(()=>li===2),'Space on focused dot keeps working');
+ // dials never start a chain: clicking / tapping the dial body rotates CW instead of playing
+ await go(6);{const T0=await toks();const did=await (await p.$('.tile.rotable')).getAttribute('id');const db=await (await p.$('#'+did)).boundingBox();
+  await p.mouse.click(db.x+db.width*.35,db.y+db.height*.6);await p.waitForTimeout(80);const T1=await toks();
+  ok(T1!==T0&&!(await p.evaluate(()=>busy||!!document.querySelector('.rung'))),'click on dial body rotates CW, never starts a chain');
+  await p.evaluate(id=>{const [x,y]=id.slice(1).split('_').map(Number);play(x,y)},did);ok(!(await p.evaluate(()=>busy)),'play() refuses a dial as start');
+  ok(/never start/.test(await p.evaluate(()=>hint.textContent)),'level 7 hint says dials never start the chain');await p.click('#restart')}
  // decoy: full coverage but wrong melody (level 3)
  await go(2);const dec=(await find('decoy'))[0];await applyAndTap(dec);await p.waitForSelector('#msg.show',{timeout:8000});
  const dm=await p.evaluate(()=>({t:msg.textContent,bad:document.querySelectorAll('#strip .col.bad').length,ok:document.querySelectorAll('#strip .col.ok').length,silent:document.querySelectorAll('.silent').length}));
@@ -95,7 +101,7 @@ const FIND=`(want)=>{const P=[];grid.forEach((r,y)=>r.forEach((c,x)=>{if(c&&kind
  await p.screenshot({path:'tools/shots/decoy_L3.png'});
  await p.waitForFunction(()=>!busy,null,{timeout:8000});ok(await p.evaluate(()=>msg.textContent===''&&msg.getAttribute('aria-hidden')==='true'),'note cleared + aria-hidden after hide');
  // non-coverage failure: silent tiles highlighted (levels 4, 8, 10)
- for(const L of [3,7,9]){await go(L);const w=await p.evaluate(`(()=>{let best=null;for(let y=0;y<N;y++)for(let x=0;x<N;x++)if(grid[y][x]){const r=simulate(grid,x,y);if(!r.solved){const rung=new Set(r.ev.filter(e=>!e.muted).map(e=>e.x+','+e.y));const n=grid.flat().filter(Boolean).length-rung.size;if(!best||n<best.n)best={id:'c'+x+'_'+y,n}}}return best})()`);
+ for(const L of [3,7,9]){await go(L);const w=await p.evaluate(`(()=>{let best=null;for(let y=0;y<N;y++)for(let x=0;x<N;x++)if(grid[y][x]&&kind(grid[y][x])!=="rot"){const r=simulate(grid,x,y);if(!r.solved){const rung=new Set(r.ev.filter(e=>!e.muted).map(e=>e.x+','+e.y));const n=grid.flat().filter(Boolean).length-rung.size;if(!best||n<best.n)best={id:'c'+x+'_'+y,n}}}return best})()`);
   await p.click('#'+w.id);await p.waitForSelector('.tile.silent',{timeout:10000});
   const got=await p.evaluate(()=>({n:document.querySelectorAll('.tile.silent').length,msg:msg.textContent}));
   ok(got.n===w.n&&/^\d+ of \d+ beats right · /.test(got.msg)&&got.msg.endsWith(`${w.n} tile${w.n===1?'':'s'} silent`),`L${L+1} silent tiles: ${got.n} / "${got.msg}"`);

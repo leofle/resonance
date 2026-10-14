@@ -8,7 +8,7 @@ const {chromium}=require('playwright-core');const {PNG}=require('pngjs');
   const base=PNG.sync.read(await p.screenshot());
   const s=await p.evaluate(()=>{const P=[];grid.forEach((r,y)=>r.forEach((c,x)=>{if(c&&kind(c)==='rot')P.push([x,y])}));
    for(let m=0;m<4**P.length;m++){let mm=m;const ks=P.map(()=>{const k=mm%4;mm=Math.floor(mm/4);return k});P.forEach(([x,y],i)=>{for(let k=0;k<ks[i];k++)rotate(grid[y][x])});
-    for(let y=0;y<N;y++)for(let x=0;x<N;x++)if(grid[y][x]){const r=simulate(grid,x,y);if(r.solved&&melodyEq(r.melody,LEVELS[li].melody)){render();return[x,y]}}
+    for(let y=0;y<N;y++)for(let x=0;x<N;x++)if(grid[y][x]&&kind(grid[y][x])!=="rot"){const r=simulate(grid,x,y);if(r.solved&&melodyEq(r.melody,LEVELS[li].melody)){render();return[x,y]}}
     P.forEach(([x,y],i)=>{for(let k=0;k<(4-ks[i])%4;k++)rotate(grid[y][x])})}});
   await p.waitForTimeout(100);const base2=PNG.sync.read(await p.screenshot());
   await p.evaluate(([x,y])=>play(x,y),s);const T0=Date.now();let worst=0,shots=0;

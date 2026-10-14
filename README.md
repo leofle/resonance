@@ -12,7 +12,7 @@ A puzzle game where every tile is a note. Tap one tile and its ring travels alon
 - **Split** (↔ / ↕) always rings out of both its sides, whichever side the ring came in from.
 - **Mute** (bold stripes, "×2") rings only when two rings hit it on the same beat; a lone ring is absorbed with a dull thud.
 - **Delay** (amber, hourglass, "+1 beat") passes the ring on one beat late; its label shows `arrival→pass-on`.
-- **Rotatable** (gold border, ↻): click ↻ to rotate clockwise; right-click or long-press (450 ms) for counter-clockwise. Undo (`z`) reverses either; Restart (`r`) resets the level at any time.
+- **Rotatable dial** (gold border, ↻): tapping or clicking a dial (the ↻ badge or anywhere on the tile) rotates it clockwise; right-click or long-press (450 ms) rotates it counter-clockwise. A dial **never starts a chain**: there is no double-tap or start option, and the solver never counts a dial as a start. Undo (`z`) reverses either; Restart (`r`) resets the level at any time.
 - Progress is saved per browser; a fresh load opens the first unsolved level. The dots are the level picker: buttons named "Level N: Name" (with aria-current on the current level), reachable with Tab and activated with Enter/Space.
 
 ## Build
