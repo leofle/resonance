@@ -9,6 +9,7 @@ const DV={'>':[1,0],'<':[-1,0],'^':[0,-1],'v':[0,1]};const A=Object.keys(DV);con
 const SPECS={
  delay:{W:5,H:4,n:[10,12],D:[1,2],M:[1,1],S:.3,R:0,loadD:true},
  hush:{W:5,H:5,n:[11,13],D:[0,0],M:[2,2],S:.35,R:0},
+ hush1:{W:5,H:4,n:[9,11],D:[0,0],M:[1,1],S:.4,R:0},
  chorus:{W:6,H:6,n:[16,17],D:[1,2],M:[1,2],S:.4,R:0,loadD:true},
  finale:{W:5,H:5,n:[12,14],D:[1,1],M:[1,2],S:.3,R:2,loadD:true},
 };
