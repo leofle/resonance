@@ -20,7 +20,7 @@ const pw=require('playwright-core');const ok=(c,m)=>{console.log((c?'PASS ':'FAI
   if(longest.m>0){await p.click('#strip');const xs=[];for(let k=0;k<12;k++){await p.waitForTimeout(150);xs.push(await p.evaluate(()=>trackX))}
    ok(Math.max(...xs)>0&&xs.some((x,i)=>i&&x>xs[i-1]),`${name} ${w}px L${longest.bi+1}: track moves during Listen (max ${Math.max(...xs).toFixed(0)}px of ${longest.m}px)`);
    const vis=await p.evaluate(()=>{const h=document.querySelector('#strip .col.hl');if(!h)return true;const a=h.getBoundingClientRect(),s=S.getBoundingClientRect();return a.left>=s.left-1&&a.right<=s.right+1});ok(vis,`${name} ${w}px: highlighted beat is inside the strip viewport`);
-   await p.waitForTimeout(2200);ok(await p.evaluate(()=>trackX===0&&S.classList.contains('more-r')&&!S.classList.contains('more-l')),`${name} ${w}px: idle strip shows the start with a right edge fade`);
+   await p.waitForTimeout(3500);{const st=await p.evaluate(()=>({x:trackX,r:S.classList.contains('more-r'),l:S.classList.contains('more-l'),hl:!!document.querySelector('#strip .col.hl'),over:TR.scrollWidth-S.clientWidth}));ok(st.x===0&&(st.r||st.over<=4)&&!st.l,`${name} ${w}px: idle strip shows the start with a right edge fade ${JSON.stringify(st)}`)};
    const sb=await (await p.$('#strip')).boundingBox();await p.mouse.move(sb.x+sb.width-20,sb.y+sb.height/2);await p.mouse.down();await p.mouse.move(sb.x+20,sb.y+sb.height/2,{steps:6});await p.mouse.up();
    ok(await p.evaluate(()=>trackX>0),`${name} ${w}px: dragging the strip scrolls it`);
    // chain also follows

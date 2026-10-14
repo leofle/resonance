@@ -13,7 +13,7 @@ function configs(g){const Z=g.map(r=>r.map(()=>0));const base=E.parse({rows:rows
   for(let y=0;y<N;y++)for(let x=0;x<N;x++)if(g2[y][x]&&E.kind(g2[y][x])!=='rot'){const r=E.simulate(g2,x,y);if(r.solved){const beats=[];r.ev.filter(e=>!e.muted).forEach(e=>{(beats[e.beat]=beats[e.beat]||[]).push([e.x,e.y])});for(let i=0;i<beats.length;i++)beats[i]=beats[i]||[];out.push({x,y,ks,beats})}}}return out}
 const mel=(b,P)=>b.map(c=>c.map(([x,y])=>P[y][x]).sort((a,b)=>a-b));
 const cov=configs(tok);const cells=[];tok.forEach((r,y)=>r.forEach((t,x)=>{if(t!=='.')cells.push([x,y])}));
-const alts=[];tok.forEach((r,y)=>r.forEach((t,x)=>{if(t[0]==='M'||t[0]==='D'){const g2=tok.map(r=>r.slice());g2[y][x]=t[1];alts.push({k:t[0],c:configs(g2)})}}));
+const alts=[];if(!process.env.NOLB)tok.forEach((r,y)=>r.forEach((t,x)=>{if(t[0]==='M'||t[0]==='D'){const g2=tok.map(r=>r.slice());g2[y][x]=t[1];alts.push({k:t[0],c:configs(g2)})}}));
 const t0=Date.now();
 while(Date.now()-t0<T){const tg=rnd(cov);if(tg.ks.every(k=>k===0)&&tg.ks.length){} const others=cov.filter(c=>c!==tg);
  const P=tok.map(r=>r.map(()=>Math.floor(Math.random()*NP)));
