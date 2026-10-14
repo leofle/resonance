@@ -61,3 +61,9 @@ node tools/test_sound.js      # audio unlock in Chrome + WebKit (desktop and iPh
 - The hint popover sits fixed at the top of the screen, clear of the board and the controls; tapping it only closes it.
 - Restart is instant, and ↶ Undo right after a Restart brings back the dials, the selection and the last Play's bars and message.
 - `node tools/test_select.js`: tap a tile's centre, then Play, starts from that tile on every level (Chromium mouse + WebKit touch); also covers the items above.
+
+## v2.11
+- Scoring: each beat is judged **only on its top note** (exactly what the strip shows); a rest matches only a rest. Audio still plays full chords. `engine.js` `chordEq` now compares top notes (`fullChordEq` keeps the old comparison). L7 and L8 were re-pitched so every level still has exactly one solution under top-note scoring.
+- Hints for 8–10 explain ↔/↕ splits and that the striped (chorus/mute) tile sounds only when two branches arrive on the same beat.
+- Play right after a failed chain works on the first click (the ~2 s fail tail used to keep the board busy).
+- Progress key bumped to `res211`.

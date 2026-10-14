@@ -101,7 +101,7 @@ button:hover{background:#ffffff22}
 // (skipping empties), arriving one beat later (two for delay). Each tile rings once.
 // Mute tiles ring only when TWO OR MORE rings arrive on the SAME beat; a lone ring is absorbed.
 // Melody of a chain = for each beat 0..last, the sorted pitches of tiles that ring on that beat.
-// Level is won when every tile rings AND the chain's melody equals the level's target melody.
+// Level is won when every tile rings AND each beat's top note equals the target's top note (rests must match).
 const N=6;
 const SCALE=[0,2,4,7,9,12];                 // semitones above BASE_HZ (major pentatonic, 6 levels: one octave + top tonic)
 const BASE_HZ=220;
@@ -129,14 +129,17 @@ function simulate(grid,sx,sy){
 }
 function melodyOf(grid,ev){const r=ev.filter(e=>!e.muted);if(!r.length)return[];const L=Math.max(...r.map(e=>e.beat))+1;
  const m=Array.from({length:L},()=>[]);r.forEach(e=>m[e.beat].push(grid[e.y][e.x].p));m.forEach(c=>c.sort((a,b)=>a-b));return m}
-const chordEq=(a,b)=>!!a&&!!b&&a.length===b.length&&a.every((v,i)=>v===b[i]);
+// v2.11: a beat is judged ONLY on its top note (what the strip shows); a rest matches only a rest. Audio still plays full chords.
+const topOf=c=>c&&c.length?Math.max(...c):null;
+const fullChordEq=(a,b)=>!!a&&!!b&&a.length===b.length&&a.every((v,i)=>v===b[i]);
+const chordEq=(a,b)=>!!a&&!!b&&topOf(a)===topOf(b);
 const melodyEq=(a,b)=>a.length===b.length&&a.every((c,i)=>chordEq(c,b[i]));
 // first beat index where played melody diverges from target (-1 if equal)
 function firstWrongBeat(m,t){const L=Math.max(m.length,t.length);for(let i=0;i<L;i++)if(!chordEq(m[i]||[],t[i]||[]))return i;return -1}
 const freq=p=>BASE_HZ*Math.pow(2,SCALE[p]/12);
-//if(typeof module!=='undefined')module.exports={N,SCALE,BASE_HZ,LEVELS,parse,simulate,kind,rotate,targets,melodyOf,chordEq,melodyEq,firstWrongBeat,freq};
+//if(typeof module!=='undefined')module.exports={topOf,fullChordEq,N,SCALE,BASE_HZ,LEVELS,parse,simulate,kind,rotate,targets,melodyOf,chordEq,melodyEq,firstWrongBeat,freq};
 
-LEVELS.splice(0,LEVELS.length,...[{"name": "First Note", "hint": "Tap a tile to hear its note and select it. Press ▶ Play: the ring starts there and follows the arrows, one tile per beat. Your chain must play the tune shown above.", "rows": [". v:3 . . <:0 .", "v:0 <:0 . . ^:3 .", ". . . . . .", ". . . . . .", "v:4 . . . . .", ">:1 . . . . ."], "melody": [[3], [0], [3], [0], [0], [4], [1]]}, {"name": "Gaps", "hint": "Rings leap over empty slots to the next tile in line. Tap tiles to hear them before you Play.", "rows": [". . . . . .", ". . v:3 . . .", ". . . . . .", ">:5 . . . >:0 v:2", "^:4 . <:0 . . .", ". . . . . v:0"], "melody": [[3], [0], [4], [5], [0], [2], [0]]}, {"name": "Dial", "hint": "Gold dials only turn: tap one to rotate it clockwise (right-click or hold to turn back). Two dials here, and several settings ring every tile: listen to which one sings. Dials never start the chain: set them, then select a plain tile and press ▶ Play.", "rows": [". v:0 . <:0 . Rv:1", ". v:0 . . . ^:0", ". . . . . .", ". R^:0 . . . ^:0", ". >:0 . . . ^:5", ". . . . . ."], "melody": [[0], [0], [0], [0], [5], [0], [0], [1], [0]]}, {"name": "Split", "hint": "A split tile always rings out of both its sides, whichever side the ring came in from. Several starts ring every tile, but only one plays the tune.", "rows": ["<:3 >:5 v:4 . . .", ". . . . . .", ". . . . . .", ". S|:5 . <:5 . .", "^:4 R<:0 . . . .", "^:5 S-:5 . ^:0 . ."], "melody": [[5], [0, 5], [4, 5], [0, 5], [4, 5], [3]]}, {"name": "Branches", "hint": "Four dials and several starts ring every tile, all with the same rhythm. Listen to the pitches: only one plays the tune.", "rows": ["S|:1 . R<:0 S-:3 . S-:0", ". . S|:3 . . .", "S|:5 . . . S-:3 R^:0", "R>:5 S-:3 . . . S|:0", ". . . S|:4 . .", "S-:5 . S-:5 R<:0 . S|:1"], "melody": [[3], [0, 5], [0, 1, 5], [4, 5], [3, 5], [0, 3], [0], [0, 1], [3]]}, {"name": "Hush", "hint": "Striped tiles stay silent unless two rings hit them on the same beat; then they join the chord.", "rows": ["v:0 . S-:4 . . Mv:4", ". . S|:0 S-:0 S-:4 ^:3", ". ^:4 . . Rv:4 .", ". . >:0 . S|:3 .", ". ^:0 . . <:0 .", ". . . . . ."], "melody": [[0], [0, 4], [0, 3, 4], [0, 3, 4], [0, 4], [0, 4]]}, {"name": "Delay", "hint": "Hourglass tiles hold the ring one extra beat before passing it on.", "rows": [". S-:0 . D<:3 R>:5 .", "R>:5 S-:2 . . S|:2 S|:2", "Dv:3 . . . . .", ". . . . . D^:3", "S|:4 S|:5 . . S-:2 R^:2", ". R^:5 D>:4 . S-:1 ."], "melody": [[2], [2, 5], [2, 3, 5], [2, 3, 5], [0, 4, 5], [2, 3], [1], [4]]}, {"name": "Chorus", "hint": "Chorus: three dials, splits, one striped mute and one hourglass. Many settings ring every tile; the strip shows only the top note of each beat, so listen for the chords.", "rows": [". . . . . .", "R>:1 S-:5 . >:5 S|:4 .", "R<:5 . >:0 Mv:5 S-:5 R^:4", ". . . . . .", ". . . . . .", ". S|:5 . S-:5 >:1 D>:1"], "melody": [[5], [5], [1, 5], [4, 5], [0, 5], [4, 5], [1, 5], [1]]}, {"name": "Tuning", "hint": "Tuning: four dials, splits and a mute. A dozen settings ring every tile, only one sings the tune.", "rows": [". . . . . .", "S|:2 . S-:5 . . R^:4", ">:4 . . . Mv:5 S-:1", ". R^:1 . v:4 ^:3 .", ". ^:5 . . R^:5 <:0", ". . ^:5 S-:0 . Rv:2"], "melody": [[5], [1], [4], [0], [2, 5], [0, 5], [2, 4, 5], [1, 3, 4], [5]]}, {"name": "Finale", "hint": "Finale: four dials with splits, a mute and an hourglass all together. Count on your ears, not the strip.", "rows": [". . . . . .", ">:5 . M>:3 . . S-:2", ". . ^:4 Rv:1 v:3 R>:3", "^:2 S-:2 S|:4 S|:2 . .", ". Rv:5 . S-:4 >:2 Rv:5", ". . Dv:3 . . ."], "melody": [[2], [1, 4], [2, 3, 5], [2, 5], [2, 3, 4], [2, 3, 4, 5], [3]]}]);
+LEVELS.splice(0,LEVELS.length,...[{"name": "First Note", "hint": "Tap a tile to hear its note and select it. Press ▶ Play: the ring starts there and follows the arrows, one tile per beat. Your chain must play the tune shown above.", "rows": [". v:3 . . <:0 .", "v:0 <:0 . . ^:3 .", ". . . . . .", ". . . . . .", "v:4 . . . . .", ">:1 . . . . ."], "melody": [[3], [0], [3], [0], [0], [4], [1]]}, {"name": "Gaps", "hint": "Rings leap over empty slots to the next tile in line. Tap tiles to hear them before you Play.", "rows": [". . . . . .", ". . v:3 . . .", ". . . . . .", ">:5 . . . >:0 v:2", "^:4 . <:0 . . .", ". . . . . v:0"], "melody": [[3], [0], [4], [5], [0], [2], [0]]}, {"name": "Dial", "hint": "Gold dials only turn: tap one to rotate it clockwise (right-click or hold to turn back). Two dials here, and several settings ring every tile: listen to which one sings. Dials never start the chain: set them, then select a plain tile and press ▶ Play.", "rows": [". v:0 . <:0 . Rv:1", ". v:0 . . . ^:0", ". . . . . .", ". R^:0 . . . ^:0", ". >:0 . . . ^:5", ". . . . . ."], "melody": [[0], [0], [0], [0], [5], [0], [0], [1], [0]]}, {"name": "Split", "hint": "A split tile always rings out of both its sides, whichever side the ring came in from. Several starts ring every tile, but only one plays the tune.", "rows": ["<:3 >:5 v:4 . . .", ". . . . . .", ". . . . . .", ". S|:5 . <:5 . .", "^:4 R<:0 . . . .", "^:5 S-:5 . ^:0 . ."], "melody": [[5], [0, 5], [4, 5], [0, 5], [4, 5], [3]]}, {"name": "Branches", "hint": "Four dials and several starts ring every tile, all with the same rhythm. Listen to the pitches: only one plays the tune.", "rows": ["S|:1 . R<:0 S-:3 . S-:0", ". . S|:3 . . .", "S|:5 . . . S-:3 R^:0", "R>:5 S-:3 . . . S|:0", ". . . S|:4 . .", "S-:5 . S-:5 R<:0 . S|:1"], "melody": [[3], [0, 5], [0, 1, 5], [4, 5], [3, 5], [0, 3], [0], [0, 1], [3]]}, {"name": "Hush", "hint": "Striped tiles stay silent unless two rings hit them on the same beat; then they join the chord.", "rows": ["v:0 . S-:4 . . Mv:4", ". . S|:0 S-:0 S-:4 ^:3", ". ^:4 . . Rv:4 .", ". . >:0 . S|:3 .", ". ^:0 . . <:0 .", ". . . . . ."], "melody": [[0], [0, 4], [0, 3, 4], [0, 3, 4], [0, 4], [0, 4]]}, {"name": "Delay", "hint": "Hourglass tiles hold the ring one extra beat before passing it on.", "rows": [". S-:1 . D<:4 R>:5 .", "R>:0 S-:5 . . S|:5 S|:3", "Dv:2 . . . . .", ". . . . . D^:3", "S|:5 S|:5 . . S-:0 R^:1", ". R^:0 D>:0 . S-:5 ."], "melody": [[5], [0, 5], [0, 2, 5], [1, 4, 5], [0, 3, 5], [0, 1], [3], [5]]}, {"name": "Chorus", "hint": "Chorus: ↔ and ↕ tiles split the ring into two branches. The striped tile only sounds when two branches reach it on the same beat. Three dials, one hourglass. Each beat is judged on its top note, as the strip shows.", "rows": [". . . . . .", "R>:2 S-:1 . >:4 S|:2 .", "R<:3 . >:4 Mv:1 S-:0 R^:0", ". . . . . .", ". . . . . .", ". S|:1 . S-:1 >:3 D>:4"], "melody": [[1], [2, 4], [2, 3], [0, 4], [0, 1], [1, 4], [1, 3]]}, {"name": "Tuning", "hint": "Tuning: ↔ and ↕ split the ring in two; the striped tile needs both branches to arrive on the same beat. Four dials: only one setting sings the tune.", "rows": [". . . . . .", "S|:2 . S-:5 . . R^:4", ">:4 . . . Mv:5 S-:1", ". R^:1 . v:4 ^:3 .", ". ^:5 . . R^:5 <:0", ". . ^:5 S-:0 . Rv:2"], "melody": [[5], [1], [4], [0], [2, 5], [0, 5], [2, 4, 5], [1, 3, 4], [5]]}, {"name": "Finale", "hint": "Finale: four dials, ↔/↕ splits that send the ring two ways, an hourglass, and a striped tile that sounds only when two branches arrive together.", "rows": [". . . . . .", ">:5 . M>:3 . . S-:2", ". . ^:4 Rv:1 v:3 R>:3", "^:2 S-:2 S|:4 S|:2 . .", ". Rv:5 . S-:4 >:2 Rv:5", ". . Dv:3 . . ."], "melody": [[2], [1, 4], [2, 3, 5], [2, 5], [2, 3, 4], [2, 3, 4, 5], [3]]}]);
 const HUE=[0,40,120,185,240,295];           // one colour per pitch (shared by tiles and the melody strip)
 const BEAT=180;
 let AC=null,soundOn=true,MASTER=null,TM=[];
@@ -186,7 +189,7 @@ const ARROW={'>':0,'v':90,'<':180,'^':270};
 function svgFor(c){const k=kind(c);const sw='stroke="#e9e6ff" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"';
  if(k==='split'){const r=c.t==='S|'?90:0;return `<svg viewBox="0 0 24 24" ${sw} style="transform:rotate(${r}deg)"><path d="M2 12h20M6 8l-4 4 4 4M18 8l4 4-4 4"/></svg>`}
  const d=c.t[c.t.length-1];return `<svg viewBox="0 0 24 24" ${sw} style="transform:rotate(${ARROW[d]}deg)"><path d="M4 12h15M13 6l6 6-6 6"/></svg>`}
-const KEY='res28';   // v2.8 levels; old progress (res2*) is ignored
+const KEY='res211';   // v2.11: top-note scoring + regenerated L7/L8; older progress is ignored
 let li=0,grid,history=[],busy=false,done=JSON.parse(localStorage[KEY+'Done']||'[]');
 const B=document.getElementById('board'),S=document.getElementById('strip'),TR=document.getElementById('track');
 // strip viewport = board width; the track scrolls (transform) when beats don't fit
@@ -211,7 +214,7 @@ function fitStrip(){S.style.width=B.offsetWidth+'px';TR.classList.remove('fill')
  S.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();listen()}})}
 // hint popover: auto-shown once per device on levels that introduce a mechanic; '?' reopens; tap or first move dismisses
 const HINT_AUTO=[0,1,2,3,5,6];   // basics, gaps, dial, split, mute, delay
-var undoRestart=null;
+var undoRestart=null,playId=0;
 const HP=document.getElementById('hintpop');
 function seenHints(){try{return JSON.parse(localStorage[KEY+'Hints']||'[]')}catch(e){return[]}}
 function showHint(){HP.innerHTML=`${LEVELS[li].hint}<small>Tap to close · ? to reopen</small>`;HP.hidden=false}
@@ -287,7 +290,7 @@ function preview(x,y){if(busy||li>=4)return;clearPreview();   // dial-target out
  if(!grid[y][x])return;
  targets(grid,x,y).forEach(([a,b])=>document.getElementById(`c${a}_${b}`).classList.add('ghost'))}
 function wave(el){const w=document.createElement('div');w.className='wave';w.style.left='50%';w.style.top='50%';el.appendChild(w);later(()=>w.remove(),900)}
-function play(x,y){if(busy||kind(grid[y][x])==='rot')return;undoRestart=null;window.LASTPLAY={x,y};hideHint();setTimeout(playUI);busy=true;clearPreview();ac();const r=simulate(grid,x,y),ev=r.ev,tgt=LEVELS[li].melody;
+function play(x,y){if(busy||kind(grid[y][x])==='rot')return;undoRestart=null;window.LASTPLAY={x,y};playId++;hideHint();setTimeout(playUI);busy=true;clearPreview();ac();const r=simulate(grid,x,y),ev=r.ev,tgt=LEVELS[li].melody;
  LT.forEach(clearTimeout);LT=[];clearStrip();hideBars();hideMsg();
  const beats=Math.max(r.melody.length,tgt.length);
  for(let b=0;b<beats;b++){const here=ev.filter(e=>e.beat===b);
@@ -300,12 +303,13 @@ function play(x,y){if(busy||kind(grid[y][x])==='rot')return;undoRestart=null;win
  const won=r.solved&&melodyEq(r.melody,tgt);
  later(()=>{if(won)win();else fail(r)},(beats-1)*BEAT+500)}
 // failed chain: pulse silent tiles, "N tiles silent · melody off at beat N" for ~1.2s, then reset
-function fail(r){const rung=new Set(r.ev.filter(e=>!e.muted).map(e=>e.x+','+e.y));let n=0;
+function fail(r){busy=false;playUI();const pid=playId;   // the chain is over: taps/Play work at once (they used to be swallowed for ~2s, so Play seemed to need two clicks)
+const rung=new Set(r.ev.filter(e=>!e.muted).map(e=>e.x+','+e.y));let n=0;
  grid.forEach((row,y)=>row.forEach((c,x)=>{if(c&&!rung.has(x+','+y)){n++;document.getElementById(`c${x}_${y}`).classList.add('silent')}}));
  const T=LEVELS[li].melody,right=T.filter((c,i)=>chordEq(r.melody[i]||[],c)).length;const parts=[`${right} of ${T.length} beats right`];if(n)parts.push(`${n} tile${n===1?'':'s'} silent`);
  const m=document.getElementById('msg');m.textContent=parts.join(' · ');m.classList.add('show');m.removeAttribute('aria-hidden');
- later(()=>{document.querySelectorAll('.rung').forEach(e=>{e.style.transition='background 1s';e.classList.remove('rung','past')});
-  later(()=>{busy=false;resetTiles();playUI()},700)},1200)}
+ later(()=>{if(pid!==playId)return;document.querySelectorAll('.rung').forEach(e=>{e.style.transition='background 1s';e.classList.remove('rung','past')});
+  later(()=>{if(pid===playId&&!busy){resetTiles();playUI()}},700)},1200)}
 // back to the idle look in place (pitch bars of this attempt stay until the next attempt / Restart / rotate)
 function resetTiles(){setTrack(0);document.querySelectorAll('.tile').forEach(e=>{e.classList.remove('rung','past','silent','muted-hit');e.style.transition='';})}
 function win(){if(soundOn)[0,2,4,5].forEach((p,i)=>note(p,i*.06,.18,2.4));

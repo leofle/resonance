@@ -143,7 +143,7 @@ const ARROW={'>':0,'v':90,'<':180,'^':270};
 function svgFor(c){const k=kind(c);const sw='stroke="#e9e6ff" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"';
  if(k==='split'){const r=c.t==='S|'?90:0;return `<svg viewBox="0 0 24 24" ${sw} style="transform:rotate(${r}deg)"><path d="M2 12h20M6 8l-4 4 4 4M18 8l4 4-4 4"/></svg>`}
  const d=c.t[c.t.length-1];return `<svg viewBox="0 0 24 24" ${sw} style="transform:rotate(${ARROW[d]}deg)"><path d="M4 12h15M13 6l6 6-6 6"/></svg>`}
-const KEY='res28';   // v2.8 levels; old progress (res2*) is ignored
+const KEY='res211';   // v2.11: top-note scoring + regenerated L7/L8; older progress is ignored
 let li=0,grid,history=[],busy=false,done=JSON.parse(localStorage[KEY+'Done']||'[]');
 const B=document.getElementById('board'),S=document.getElementById('strip'),TR=document.getElementById('track');
 // strip viewport = board width; the track scrolls (transform) when beats don't fit
@@ -168,7 +168,7 @@ function fitStrip(){S.style.width=B.offsetWidth+'px';TR.classList.remove('fill')
  S.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();listen()}})}
 // hint popover: auto-shown once per device on levels that introduce a mechanic; '?' reopens; tap or first move dismisses
 const HINT_AUTO=[0,1,2,3,5,6];   // basics, gaps, dial, split, mute, delay
-var undoRestart=null;
+var undoRestart=null,playId=0;
 const HP=document.getElementById('hintpop');
 function seenHints(){try{return JSON.parse(localStorage[KEY+'Hints']||'[]')}catch(e){return[]}}
 function showHint(){HP.innerHTML=`${LEVELS[li].hint}<small>Tap to close · ? to reopen</small>`;HP.hidden=false}
@@ -244,7 +244,7 @@ function preview(x,y){if(busy||li>=4)return;clearPreview();   // dial-target out
  if(!grid[y][x])return;
  targets(grid,x,y).forEach(([a,b])=>document.getElementById(`c${a}_${b}`).classList.add('ghost'))}
 function wave(el){const w=document.createElement('div');w.className='wave';w.style.left='50%';w.style.top='50%';el.appendChild(w);later(()=>w.remove(),900)}
-function play(x,y){if(busy||kind(grid[y][x])==='rot')return;undoRestart=null;window.LASTPLAY={x,y};hideHint();setTimeout(playUI);busy=true;clearPreview();ac();const r=simulate(grid,x,y),ev=r.ev,tgt=LEVELS[li].melody;
+function play(x,y){if(busy||kind(grid[y][x])==='rot')return;undoRestart=null;window.LASTPLAY={x,y};playId++;hideHint();setTimeout(playUI);busy=true;clearPreview();ac();const r=simulate(grid,x,y),ev=r.ev,tgt=LEVELS[li].melody;
  LT.forEach(clearTimeout);LT=[];clearStrip();hideBars();hideMsg();
  const beats=Math.max(r.melody.length,tgt.length);
  for(let b=0;b<beats;b++){const here=ev.filter(e=>e.beat===b);
@@ -257,12 +257,13 @@ function play(x,y){if(busy||kind(grid[y][x])==='rot')return;undoRestart=null;win
  const won=r.solved&&melodyEq(r.melody,tgt);
  later(()=>{if(won)win();else fail(r)},(beats-1)*BEAT+500)}
 // failed chain: pulse silent tiles, "N tiles silent · melody off at beat N" for ~1.2s, then reset
-function fail(r){const rung=new Set(r.ev.filter(e=>!e.muted).map(e=>e.x+','+e.y));let n=0;
+function fail(r){busy=false;playUI();const pid=playId;   // the chain is over: taps/Play work at once (they used to be swallowed for ~2s, so Play seemed to need two clicks)
+const rung=new Set(r.ev.filter(e=>!e.muted).map(e=>e.x+','+e.y));let n=0;
  grid.forEach((row,y)=>row.forEach((c,x)=>{if(c&&!rung.has(x+','+y)){n++;document.getElementById(`c${x}_${y}`).classList.add('silent')}}));
  const T=LEVELS[li].melody,right=T.filter((c,i)=>chordEq(r.melody[i]||[],c)).length;const parts=[`${right} of ${T.length} beats right`];if(n)parts.push(`${n} tile${n===1?'':'s'} silent`);
  const m=document.getElementById('msg');m.textContent=parts.join(' · ');m.classList.add('show');m.removeAttribute('aria-hidden');
- later(()=>{document.querySelectorAll('.rung').forEach(e=>{e.style.transition='background 1s';e.classList.remove('rung','past')});
-  later(()=>{busy=false;resetTiles();playUI()},700)},1200)}
+ later(()=>{if(pid!==playId)return;document.querySelectorAll('.rung').forEach(e=>{e.style.transition='background 1s';e.classList.remove('rung','past')});
+  later(()=>{if(pid===playId&&!busy){resetTiles();playUI()}},700)},1200)}
 // back to the idle look in place (pitch bars of this attempt stay until the next attempt / Restart / rotate)
 function resetTiles(){setTrack(0);document.querySelectorAll('.tile').forEach(e=>{e.classList.remove('rung','past','silent','muted-hit');e.style.transition='';})}
 function win(){if(soundOn)[0,2,4,5].forEach((p,i)=>note(p,i*.06,.18,2.4));

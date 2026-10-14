@@ -6,7 +6,7 @@ const E=require('../engine.js');const fs=require('fs');const L=require('../final
 const li=+process.argv[2],T=(+process.argv[3]||120)*1000;const lv=L[li];
 const tok=lv.rows.map(r=>r.split(/\s+/).map(t=>t==='.'?'.':t.split(':')[0]));
 const rowsOf=(g,P)=>g.map((r,y)=>r.map((t,x)=>t==='.'?'.':t+':'+P[y][x]).join(' '));
-const eqM=(a,b)=>a.length===b.length&&a.every((c,i)=>c.length===b[i].length&&c.every((v,j)=>v===b[i][j]));
+const eqM=(a,b)=>a.length===b.length&&a.every((c,i)=>E.topOf(c)===E.topOf(b[i]));   // top-note scoring (v2.11)
 const rnd=a=>a[Math.floor(Math.random()*a.length)];
 function configs(g){const Z=g.map(r=>r.map(()=>0));const base=E.parse({rows:rowsOf(g,Z)});const pos=[];base.forEach((r,y)=>r.forEach((c,x)=>{if(c&&E.kind(c)==='rot')pos.push([x,y])}));const out=[];
  for(let m=0;m<4**pos.length;m++){const g2=E.parse({rows:rowsOf(g,Z)});let mm=m;const ks=pos.map(([x,y])=>{const k=mm%4;mm=Math.floor(mm/4);for(let i=0;i<k;i++)E.rotate(g2[y][x]);return k});

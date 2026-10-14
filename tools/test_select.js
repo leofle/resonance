@@ -7,7 +7,7 @@ const ok=(c,m)=>{console.log((c?'PASS ':'FAIL ')+m);if(!c)process.exitCode=1};
  const runs=[['chromium',{executablePath:'/usr/bin/google-chrome',args:['--autoplay-policy=no-user-gesture-required']},{viewport:{width:1280,height:900}},false],
   ['webkit',{},{viewport:{width:390,height:844},hasTouch:true,isMobile:true,deviceScaleFactor:3},true]];
  for(const [name,lo,co,touch] of runs){const b=await pw[name].launch(lo);const c=await b.newContext(co);
-  await c.addInitScript(()=>{if(!localStorage.res28Hints)localStorage.res28Hints='[0,1,2,3,4,5,6,7,8,9]'});const p=await c.newPage();
+  await c.addInitScript(()=>{if(!localStorage.res211Hints)localStorage.res211Hints='[0,1,2,3,4,5,6,7,8,9]'});const p=await c.newPage();
   await p.goto('http://localhost:8765/index.html');await p.waitForTimeout(500);
   const tap=async id=>{const bb=await p.locator('#'+id).boundingBox();const x=bb.x+bb.width/2,y=bb.y+bb.height/2;if(touch)await p.touchscreen.tap(x,y);else await p.mouse.click(x,y)};
   for(let i=0;i<10;i++){await p.evaluate(i=>{load(i);LT.forEach(clearTimeout)},i);
@@ -16,6 +16,13 @@ const ok=(c,m)=>{console.log((c?'PASS ':'FAIL ')+m);if(!c)process.exitCode=1};
     await tap(id);await tap('play');await p.waitForTimeout(30);const lp=await p.evaluate(()=>window.LASTPLAY&&`c${LASTPLAY.x}_${LASTPLAY.y}`);if(lp!==id)bad.push(id+'→'+lp)}
    await p.evaluate(()=>{LT.forEach(clearTimeout);busy=false;resetTiles();playUI()});
    ok(!bad.length,`${name}${touch?' touch':''} L${i+1}: tap tile centre then Play starts from exactly that tile (${ids.slice(0,6).length} tiles)${bad.length?' '+bad.join(','):''}`)}
+  // Play right after a failed chain (during the fail message) registers on the first click (L2, L3)
+  for(const lv of [1,2]){await p.evaluate(l=>load(l),lv);const ids=await p.evaluate(()=>[...document.querySelectorAll('.tile:not(.rotable)')].map(e=>e.id));
+   await tap(ids[0]);await tap('play');await p.waitForFunction(()=>!busy,null,{timeout:15000});
+   const won=await p.evaluate(()=>document.getElementById('win').style.display==='flex');if(won){await p.evaluate(()=>{document.getElementById('win').style.display='none'})}
+   await tap(ids[1]);await tap('play');await p.waitForTimeout(40);const st=await p.evaluate(()=>({busy,lp:LASTPLAY&&`c${LASTPLAY.x}_${LASTPLAY.y}`}));
+   ok(st.busy&&st.lp===ids[1],`${name} L${lv+1}: tap + ONE Play click right after a failed chain starts from the new tile`);
+   await p.evaluate(()=>{LT.forEach(clearTimeout);busy=false;resetTiles();playUI()})}
   // persistent bars + message after a failed Play; Undo reverses Restart
   await p.evaluate(()=>load(4));const id=await p.evaluate(()=>document.querySelector('.tile:not(.rotable)').id);
   const dial=await p.evaluate(()=>document.querySelector('.tile.rotable').id);
