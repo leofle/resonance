@@ -13,6 +13,7 @@ A puzzle game where every tile is a note. Tap one tile and its ring travels alon
 - **Mute** (bold stripes, "×2") rings only when two rings hit it on the same beat; a lone ring is absorbed with a dull thud.
 - **Delay** (amber, hourglass, "+1 beat") passes the ring on one beat late; its label shows `arrival→pass-on`.
 - **Rotatable dial** (gold border, ↻): tapping or clicking a dial (the ↻ badge or anywhere on the tile) rotates it clockwise; right-click or long-press (450 ms) rotates it counter-clockwise. A dial **never starts a chain**: there is no double-tap or start option, and the solver never counts a dial as a start. Undo (`z`) reverses either; Restart (`r`) resets the level at any time.
+- Sound: browsers (iOS Safari/Chrome especially) only allow audio after a tap. Until then a **🔈 Tap to enable sound** button shows and the 🔇/🔊 icon reflects the real audio state; the first tap, click or key unlocks audio (and iOS plays even with the mute switch on). The tune auto-plays on level load only once sound is enabled.
 - Progress is saved per browser; a fresh load opens the first unsolved level. The dots are the level picker: buttons named "Level N: Name" (with aria-current on the current level), reachable with Tab and activated with Enter/Space.
 
 ## Build
@@ -35,4 +36,5 @@ node tools/test_ui.js         # Playwright UI test (fixed board; no digits on st
 node tools/test_effects.js    # 0 pixels change outside the board (strip included) mid-chain (L5, L8, L10)
 node tools/test_audio.js && python3 tools/analyze_wav.py   # renders level3_solve.wav + level3_decoy.wav offline + analysis
 node tools/stress_audio.js    # limiter keeps dense chains below 1.0
+node tools/test_sound.js      # audio unlock in Chrome + WebKit (desktop and iPhone-size touch); needs `npx playwright-core install webkit`
 ```
