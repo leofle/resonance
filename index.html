@@ -47,6 +47,7 @@ h1{margin:0;font-weight:300;letter-spacing:.4em;font-size:22px}
 @keyframes ring{0%{transform:scale(1)}35%{transform:scale(1.05)}100%{transform:scale(1)}}
 @keyframes wave{from{width:0;height:0;opacity:.9;margin:0}to{width:160px;height:160px;margin:-80px;opacity:0}}
 @keyframes shake{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+#unlock{position:fixed;right:14px;top:14px;z-index:20;background:#f7c948;color:#1a1400;border:0;font-weight:700;box-shadow:0 4px 18px #0009}#unlock:hover{background:#ffd866}#unlock[hidden]{display:none}
 #bar{margin-top:26px;display:flex;gap:12px}
 button{background:#ffffff12;color:#e9e6ff;border:1px solid #ffffff22;border-radius:999px;padding:10px 18px;font-size:14px;cursor:pointer}
 button:hover{background:#ffffff22}
@@ -69,6 +70,7 @@ button:hover{background:#ffffff22}
 <div id="hint"></div><div id="msg" aria-live="polite" aria-hidden="true"></div>
 <div id="tune"><button id="listen" title="Play the target melody (L)">♪ Listen</button><div id="strip" aria-label="Target melody"></div></div>
 <div id="board"></div>
+<button id="unlock" type="button">🔈 Tap to enable sound</button>
 <div id="bar"><button id="undo">↶ Undo</button><button id="restart">⟲ Restart</button><button id="sound">🔊</button></div>
 <div id="flash"></div>
 <div id="win"><h2>RESOLVED</h2><button id="next">Next ›</button></div>
@@ -125,17 +127,43 @@ const later=(f,ms)=>{const t=setTimeout(f,ms);TM.push(t);return t};
 function clearTimers(){TM.forEach(clearTimeout);TM=[];document.querySelectorAll('#strip .col.hl').forEach(c=>c.classList.remove('hl'))}
 function master(a){// master gain -> limiter so dense chains never clip
  const g=a.createGain();g.gain.value=.7;const c=a.createDynamicsCompressor();c.threshold.value=-10;c.knee.value=6;c.ratio.value=12;c.attack.value=.003;c.release.value=.25;g.connect(c);c.connect(a.destination);return g}
-function ac(){if(!AC){AC=new (window.AudioContext||window.webkitAudioContext)();MASTER=master(AC)}if(AC.state==='suspended')AC.resume();return AC}
+// ---- audio unlock (iOS/Safari/Chrome autoplay rules) ----
+// The context is only ever created or resumed synchronously inside a user gesture (capture listeners below), never
+// on page load. On unlock: resume() whenever state != 'running' (covers 'suspended' and iOS 'interrupted'), play a
+// 1-sample silent buffer, set navigator.audioSession.type='playback' and start a looping silent <audio> element so
+// iOS routes Web Audio to the media channel (plays with the ring/mute switch on).
+const SILENT_WAV='data:audio/wav;base64,UklGRkQDAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YSADAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgA==';
+let KEEP=null,primed=false;   // primed: silent buffer played at least once
+function audioReady(){return !!AC&&AC.state==='running'}
+function unlock(){
+ try{if(navigator.audioSession&&navigator.audioSession.type!=='playback')navigator.audioSession.type='playback'}catch(e){}
+ if(!AC){const C=window.AudioContext||window.webkitAudioContext;if(!C)return;try{AC=new C()}catch(e){return}MASTER=master(AC);primed=false;
+  AC.onstatechange=soundUI}
+ if(AC.state!=='running'){try{const p=AC.resume();if(p&&p.then)p.then(soundUI,soundUI)}catch(e){}}
+ // iOS only honours touchend/click/keydown as activation (not pointerdown/touchstart), so keep priming on every
+ // gesture until the context really runs: silent 1-sample buffer played synchronously in this handler
+ if(!primed||AC.state!=='running'){primed=true;try{const b=AC.createBuffer(1,1,22050),s=AC.createBufferSource();s.buffer=b;s.connect(AC.destination);s.start(0)}catch(e){}}
+ if(!KEEP){try{KEEP=new Audio(SILENT_WAV);KEEP.loop=true;KEEP.preload='auto';KEEP.setAttribute('playsinline','');KEEP.setAttribute('webkit-playsinline','')}catch(e){}}
+ if(KEEP&&KEEP.paused){try{const p=KEEP.play();if(p&&p.catch)p.catch(()=>{})}catch(e){}}
+ soundUI()}
+['pointerdown','touchend','click','keydown'].forEach(ev=>addEventListener(ev,unlock,{capture:true,passive:true}));
+// sound icon reflects the real context state; banner offers an explicit unlock until the context is running
+function soundUI(){const b=document.getElementById('sound'),st=AC?AC.state:'none',on=soundOn&&st==='running';if(!b)return;
+ const ic=on?'🔊':'🔇';if(b.textContent!==ic)b.textContent=ic;/* never replace the text node mid-gesture: WebKit drops the click */b.dataset.state=st;b.setAttribute('aria-pressed',String(on));
+ b.title=!soundOn?'Sound off (click to turn on)':st==='running'?'Sound on (click to mute)':'Sound not enabled yet: tap to enable';b.setAttribute('aria-label',b.title);
+ const n=document.getElementById('unlock'),hide=st==='running'||!soundOn;   // hide after the gesture finishes, so the banner's own click still lands
+ if(n){if(!hide)n.hidden=false;else if(!n.hidden)setTimeout(()=>{if(audioReady()||!soundOn)n.hidden=true},400)}}
+function ac(){return AC}
 // tile note: pitch index p (0..5) -> pentatonic frequency (engine freq())
-function note(p,t=0,vol=.22,dur=1.4){if(!soundOn)return;const a=ac(),o=a.createOscillator(),o2=a.createOscillator(),g=a.createGain(),f=freq(p);
+function note(p,t=0,vol=.22,dur=1.4){if(!soundOn||!AC)return;const a=ac(),o=a.createOscillator(),o2=a.createOscillator(),g=a.createGain(),f=freq(p);
  o.type='sine';o2.type='triangle';o.frequency.value=f;o2.frequency.value=f*2;const s=a.currentTime+t;
  g.gain.setValueAtTime(0,s);g.gain.linearRampToValueAtTime(vol,s+.01);g.gain.exponentialRampToValueAtTime(.0001,s+dur);
  const g2=a.createGain();g2.gain.value=.25;o.connect(g);o2.connect(g2);g2.connect(g);g.connect(MASTER);o.start(s);o2.start(s);o.stop(s+dur);o2.stop(s+dur)}
 // wrong beat: a short harsh minor-second cluster (sawtooth a semitone above + below the played note) so the error is audible
-function clash(p,t=0){if(!soundOn)return;const a=ac(),s=a.currentTime+t,f=freq(p);
+function clash(p,t=0){if(!soundOn||!AC)return;const a=ac(),s=a.currentTime+t,f=freq(p);
  [f*Math.pow(2,1/12),f*Math.pow(2,-1/12)].forEach(fr=>{const o=a.createOscillator(),g=a.createGain();o.type='sawtooth';o.frequency.value=fr;
   g.gain.setValueAtTime(0,s);g.gain.linearRampToValueAtTime(.09,s+.01);g.gain.exponentialRampToValueAtTime(.0001,s+.35);o.connect(g);g.connect(MASTER);o.start(s);o.stop(s+.36)})}
-function thud(t=0){if(!soundOn)return;const a=ac(),o=a.createOscillator(),g=a.createGain(),s=a.currentTime+t;o.frequency.value=90;g.gain.setValueAtTime(.15,s);g.gain.exponentialRampToValueAtTime(.001,s+.2);o.connect(g);g.connect(MASTER);o.start(s);o.stop(s+.2)}
+function thud(t=0){if(!soundOn||!AC)return;const a=ac(),o=a.createOscillator(),g=a.createGain(),s=a.currentTime+t;o.frequency.value=90;g.gain.setValueAtTime(.15,s);g.gain.exponentialRampToValueAtTime(.001,s+.2);o.connect(g);g.connect(MASTER);o.start(s);o.stop(s+.2)}
 function playMelody(m,t0=0){m.forEach((ch,i)=>ch.forEach(p=>note(p,t0+i*BEAT/1000)))}
 const ARROW={'>':0,'v':90,'<':180,'^':270};
 function svgFor(c){const k=kind(c);const sw='stroke="#e9e6ff" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"';
@@ -152,11 +180,11 @@ function load(i){clearTimers();shown=new Set();li=i;localStorage[KEY+'Lvl']=i;gr
  document.getElementById('hint').textContent=LEVELS[i].hint;
  document.getElementById('dots').innerHTML=LEVELS.map((L,j)=>`<button type="button" class="dot${done.includes(j)?' done':''}" data-j="${j}" aria-label="Level ${j+1}: ${L.name}${done.includes(j)?' (solved)':''}" title="Level ${j+1}: ${L.name}"${j===i?' aria-current="step"':''}></button>`).join('');
  document.querySelectorAll('#dots .dot').forEach(e=>e.onclick=()=>{document.getElementById('win').style.display='none';load(+e.dataset.j)});
- if(AC)later(listen,350)}
+ if(audioReady())later(listen,350);else soundUI()}   // auto-play the tune only once sound is unlocked; never creates the context
 // melody strip: one column per beat, one bar per note (bar height + colour = pitch; chord notes side by side). No digits.
 function strip(){const m=LEVELS[li].melody;S.innerHTML=m.map((ch,i)=>`<div class="col" id="b${i}">${ch.map(p=>`<i style="--h:${HUE[p]};height:${PH(p)}%"></i>`).join('')}</div>`).join('')}
 let LT=[];   // Listen highlight timers: cancelled (and the highlight cleared) when a chain starts or the level reloads
-function listen(){if(busy)return;ac();LT.forEach(clearTimeout);LT=[];clearStrip();playMelody(LEVELS[li].melody);const cols=[...document.querySelectorAll('#strip .col')];
+function listen(){if(busy)return;unlock();LT.forEach(clearTimeout);LT=[];clearStrip();playMelody(LEVELS[li].melody);const cols=[...document.querySelectorAll('#strip .col')];
  cols.forEach((c,i)=>LT.push(later(()=>{clearStrip();c.classList.add('hl')},i*BEAT)));LT.push(later(clearStrip,cols.length*BEAT))}
 function tileSize(){return Math.max(34,Math.min(68,Math.floor((Math.min(innerWidth,560)-24-50)/N),Math.floor((innerHeight-445)/N)-10))}
 function render(){clearTimeout(LP);const s=tileSize();
@@ -218,7 +246,8 @@ document.getElementById('next').onclick=()=>{document.getElementById('win').styl
 document.getElementById('restart').onclick=()=>load(li);   // allowed any time: cancels a running chain
 document.getElementById('listen').onclick=listen;
 document.getElementById('undo').onclick=()=>{if(busy||!history.length)return;const [x,y,k]=history.pop();for(let i=0;i<4-k;i++)rotate(grid[y][x]);hideBars();refreshTile(x,y)};
-document.getElementById('sound').onclick=e=>{soundOn=!soundOn;e.target.textContent=soundOn?'🔊':'🔇'};
+document.getElementById('sound').onclick=()=>{if(soundOn&&!audioReady()){unlock();return}soundOn=!soundOn;soundUI()};
+document.getElementById('unlock').onclick=()=>{unlock();soundOn=true;soundUI();setTimeout(()=>{if(!busy)listen()},60)};
 addEventListener('keydown',e=>{if(e.key==='r')document.getElementById('restart').click();if(e.key==='z')document.getElementById('undo').click();if(e.key==='l')listen()});
 addEventListener('resize',()=>{if(!busy)render()});
 // fresh load: first unsolved level (level 1 for new players); dots remain the level picker
