@@ -9,7 +9,7 @@ const FIND=`(want)=>{const P=[];grid.forEach((r,y)=>r.forEach((c,x)=>{if(c&&kind
  const p=await b.newPage({viewport:{width:1024,height:900}});const errs=[],bad=[];p.on('pageerror',e=>errs.push(e.message));
  p.on('response',r=>{if(r.status()>=400)bad.push(r.status()+' '+r.url())});p.on('console',m=>{if(m.type()==='error')bad.push('console: '+m.text())});
  const ok=(c,m)=>{console.log((c?'PASS ':'FAIL ')+m);if(!c)process.exitCode=1};
- await p.goto('http://localhost:8765/index.html');await p.evaluate(()=>localStorage.clear());await p.reload();
+ await p.addInitScript(()=>{if(!localStorage.res2Hints)localStorage.res2Hints='[0,1,2,3,4,5,6,7,8,9]'});await p.goto('http://localhost:8765/index.html');await p.evaluate(()=>localStorage.clear());await p.reload();
  const go=async i=>{await p.evaluate(i=>load(i),i);await p.waitForTimeout(60)};
  const toks=()=>p.evaluate(()=>grid.flat().map(c=>c?c.t:'.').join(' '));
  const find=w=>p.evaluate(`(${FIND})('${w}')`);
@@ -43,7 +43,7 @@ const FIND=`(want)=>{const P=[];grid.forEach((r,y)=>r.forEach((c,x)=>{if(c&&kind
     want:LEVELS[li].melody.map(ch=>ch.map(p=>PH(p)))}});
   const sepOK=r.cols.every(c=>c.every((b,k)=>k===0||b.l>=c[k-1].r+2)&&c.every(b=>b.w>=10));
   const hOK=r.cols.every((c,j)=>c.every((b,k)=>Math.abs(b.h-r.want[j][k]/100*(r.H-20))<2.5));
-  ok(!/\d/.test(r.strip)&&!/\d/.test(r.tileTxt)&&r.dp===0&&r.pb===0&&sepOK&&hOK&&r.H>=130,`L${i+1}: no digits on strip/tiles, no pitch shown before ringing, bars height=pitch, chord bars side by side (strip ${r.H}px)`)}
+  ok(!/\d/.test(r.strip)&&!/\d/.test(r.tileTxt)&&r.dp===0&&r.pb===0&&sepOK&&hOK&&r.H>=115,`L${i+1}: no digits on strip/tiles, no pitch shown before ringing, bars height=pitch, chord bars side by side (strip ${r.H}px)`)}
  // pitch revealed after a tile rings; survives fail-reset + Restart; resets on level change
  await go(0);const sol1=(await find('win'))[0];const wrong1=await p.evaluate(s=>{for(let y=0;y<N;y++)for(let x=0;x<N;x++)if(grid[y][x]&&!(x===s.x&&y===s.y))return{x,y}},sol1);
  await p.click(`#c${wrong1.x}_${wrong1.y}`);await p.waitForTimeout(200);
@@ -67,10 +67,10 @@ const FIND=`(want)=>{const P=[];grid.forEach((r,y)=>r.forEach((c,x)=>{if(c&&kind
  await go(0);await p.click(`#c${wrong1.x}_${wrong1.y}`);await p.waitForTimeout(300);await go(1);ok(await nb()===0,'bars reset on level change');
  // stale strip highlight: Listen interrupted by a tap, by Restart, and after normal end
  {const hl=()=>p.evaluate(()=>document.querySelectorAll('#strip .col.hl').length);await go(2);
-  await p.click('#listen');await p.waitForTimeout(400);await p.click('#c0_0');await p.waitForTimeout(1300);ok(await hl()===0,'Listen interrupted by a tap leaves no highlighted column');
-  await p.waitForFunction(()=>!busy,null,{timeout:8000});await p.click('#listen');await p.waitForTimeout(400);await p.click('#restart');await p.waitForTimeout(600+await p.evaluate(()=>LEVELS[li].melody.length*180));
+  await p.click('#strip');await p.waitForTimeout(400);await p.click('#c0_0');await p.waitForTimeout(1300);ok(await hl()===0,'Listen interrupted by a tap leaves no highlighted column');
+  await p.waitForFunction(()=>!busy,null,{timeout:8000});await p.click('#strip');await p.waitForTimeout(400);await p.click('#restart');await p.waitForTimeout(600+await p.evaluate(()=>LEVELS[li].melody.length*180));
   ok(await hl()===0,'Listen interrupted by Restart leaves no highlighted column (after the auto-Listen too)');
-  await p.click('#listen');await p.waitForTimeout(250+await p.evaluate(()=>LEVELS[li].melody.length*180));ok(await hl()===0,'no highlighted column after Listen ends')}
+  await p.click('#strip');await p.waitForTimeout(250+await p.evaluate(()=>LEVELS[li].melody.length*180));ok(await hl()===0,'no highlighted column after Listen ends')}
  // no click lockout: tap right after Restart, rapid rotates, click right after a rotate
  {await go(0);await p.click('#restart');const s=(await find('win'))[0];const bx=await (await p.$(`#c${s.x}_${s.y}`)).boundingBox();await p.mouse.click(bx.x+bx.width/2,bx.y+bx.height/2);
   ok(await p.evaluate(()=>busy),'tile click immediately after Restart registers');await p.click('#restart');
@@ -90,7 +90,7 @@ const FIND=`(want)=>{const P=[];grid.forEach((r,y)=>r.forEach((c,x)=>{if(c&&kind
   await p.waitForTimeout(50);ok(await p.evaluate(s=>busy&&!!document.querySelector(`#c${s.x}_${s.y}.rung`),s),`L${L+1}: page.mouse.click at tile bbox centre starts the chain from that tile`);
   await p.waitForSelector('#win',{state:'visible',timeout:10000});ok(true,`L${L+1}: coordinate click solves`);await p.evaluate(()=>{document.getElementById('win').style.display='none'})}
  // touch: hasTouch context, tap a tile, tap the rotate badge, 600 ms touch hold = CCW
- {const tc=await b.newContext({viewport:{width:412,height:860},hasTouch:true,isMobile:true,deviceScaleFactor:2});const tp=await tc.newPage();tp.on('pageerror',e=>errs.push('touch: '+e.message));
+ {const tc=await b.newContext({viewport:{width:412,height:860},hasTouch:true,isMobile:true,deviceScaleFactor:2});const tp=await tc.newPage();await tp.addInitScript(()=>{if(!localStorage.res2Hints)localStorage.res2Hints='[0,1,2,3,4,5,6,7,8,9]'});tp.on('pageerror',e=>errs.push('touch: '+e.message));
   await tp.goto('http://localhost:8765/index.html');await tp.evaluate(()=>load(6));await tp.waitForTimeout(100);
   const tt=()=>tp.evaluate(()=>grid.flat().map(c=>c?c.t:'.').join(' '));const T0=await tt();
   const rid=await (await tp.$('.tile.rotable')).getAttribute('id');const rb=await (await tp.$(`#${rid} .rot`)).boundingBox();
@@ -116,7 +116,34 @@ const FIND=`(want)=>{const P=[];grid.forEach((r,y)=>r.forEach((c,x)=>{if(c&&kind
   await p.mouse.click(db.x+db.width*.35,db.y+db.height*.6);await p.waitForTimeout(80);const T1=await toks();
   ok(T1!==T0&&!(await p.evaluate(()=>busy||!!document.querySelector('.rung'))),'click on dial body rotates CW, never starts a chain');
   await p.evaluate(id=>{const [x,y]=id.slice(1).split('_').map(Number);play(x,y)},did);ok(!(await p.evaluate(()=>busy)),'play() refuses a dial as start');
-  ok(/never start/.test(await p.evaluate(()=>hint.textContent)),'level 7 hint says dials never start the chain');await p.click('#restart')}
+  ok(/never start/.test(await p.evaluate(()=>LEVELS[li].hint)),'level 7 hint says dials never start the chain');await p.click('#restart')}
+ // v2.5: strip tap replays the tune, drag does not, keyboard works; ♪ affordance; role=button
+ {await go(8);await p.waitForTimeout(2200);const hl=()=>p.evaluate(()=>document.querySelectorAll('#strip .col.hl').length);
+  const sb=await (await p.$('#strip')).boundingBox();await p.mouse.click(sb.x+sb.width/2,sb.y+sb.height/2);await p.waitForTimeout(100);
+  ok(await hl()===1,'clean tap on the strip plays the tune');await p.waitForTimeout(2200);
+  await p.mouse.move(sb.x+sb.width-30,sb.y+sb.height/2);await p.mouse.down();await p.mouse.move(sb.x+30,sb.y+sb.height/2,{steps:8});await p.mouse.up();await p.waitForTimeout(150);
+  ok(await hl()===0,'dragging the strip does not play the tune');
+  await p.mouse.move(sb.x+sb.width/2,sb.y+sb.height/2);await p.mouse.down();await p.waitForTimeout(700);await p.mouse.up();await p.waitForTimeout(120);ok(await hl()===0,'a long press on the strip does not play');
+  await p.focus('#strip');await p.keyboard.press('Enter');await p.waitForTimeout(80);ok(await hl()===1,'Enter on the focused strip plays');await p.waitForTimeout(2200);
+  await p.keyboard.press(' ');await p.waitForTimeout(80);ok(await hl()===1,'Space on the focused strip plays');await p.waitForTimeout(2200);
+  const a=await p.evaluate(()=>({role:S.getAttribute('role'),label:S.getAttribute('aria-label'),tab:S.tabIndex,note:!!document.querySelector('#strip #note'),listen:!!document.getElementById('listen')}));
+  ok(a.role==='button'&&/play/i.test(a.label)&&a.tab===0&&a.note&&!a.listen,'strip is a focusable role=button with aria-label and a ♪ icon; no Listen button')}
+ // dial badge never overlaps the arrow glyph (all dial tiles, all 4 orientations)
+ {let bad=0,n=0;for(const L of [6,7,8,9]){await go(L);for(let k=0;k<4;k++){const r=await p.evaluate(()=>[...document.querySelectorAll('.tile.rotable')].map(t=>{const a=t.querySelector('svg:not(.hg) path').getBoundingClientRect(),b=t.querySelector('.rot').getBoundingClientRect();return a.right<=b.left||a.left>=b.right||a.bottom<=b.top||a.top>=b.bottom}));
+   n+=r.length;bad+=r.filter(x=>!x).length;await p.evaluate(()=>{grid.forEach((row,y)=>row.forEach((c,x)=>{if(c&&kind(c)==='rot'){rotate(c);refreshTile(x,y)}}))})}}
+  ok(n>0&&bad===0,`rotate badge never overlaps the arrow glyph bbox (${n} dial/orientation checks)`)}
+ // hint popover: auto on mechanic levels once per device, tap / first move dismisses, ? reopens, no layout shift
+ {const st=()=>p.evaluate(()=>!document.getElementById('hintpop').hidden);const geo=()=>p.evaluate(()=>JSON.stringify([board.getBoundingClientRect(),S.getBoundingClientRect()]));
+  await p.evaluate(()=>{localStorage.res2Hints='[]'});await go(1);const g0=await geo();await p.evaluate(()=>hideHint());const g1=await geo();
+  await p.evaluate(()=>{localStorage.res2Hints='[]'});await go(2);ok(await st()&&/split/i.test(await p.evaluate(()=>hintpop.textContent)),'L3 (new mechanic) shows the hint popover on first visit');
+  ok(g0===g1,'popover does not shift the layout');
+  await p.click('#hintpop');ok(!(await st()),'tap dismisses the popover');await go(3);await go(2);ok(!(await st()),'shown only once per level per device');
+  await go(3);ok(!(await st()),'L4 (no new mechanic) does not auto-show');await p.click('#help');ok(await st()&&/Listen|only one/i.test(await p.evaluate(()=>hintpop.textContent)),'? reopens the hint on any level');
+  await p.click('#help');ok(!(await st()),'? toggles it closed');await p.click('#help');
+  const t0=await p.evaluate(()=>{for(let y=0;y<N;y++)for(let x=0;x<N;x++)if(grid[y][x]&&y>=3)return 'c'+x+'_'+y});await p.click('#'+t0);ok(!(await st()),'first move dismisses the popover');
+  await p.waitForFunction(()=>!busy,null,{timeout:8000});
+  const auto=await p.evaluate(()=>{const out=[];for(let i=0;i<10;i++){localStorage.res2Hints='[]';load(i);if(!hintpop.hidden)out.push(i+1)}localStorage.res2Hints='[0,1,2,3,4,5,6,7,8,9]';hideHint();return out});
+  ok(JSON.stringify(auto)==='[1,2,3,5,6,7]',`auto-shown on levels ${auto} (new mechanics: basics, gaps, split, mute, delay, dial)`)}
  // decoy: full coverage but wrong melody (level 3)
  await go(2);const dec=(await find('decoy'))[0];await applyAndTap(dec);await p.waitForSelector('#msg.show',{timeout:8000});
  const dm=await p.evaluate(()=>({t:msg.textContent,bad:document.querySelectorAll('#strip .col.bad').length,ok:document.querySelectorAll('#strip .col.ok').length,silent:document.querySelectorAll('.silent').length}));

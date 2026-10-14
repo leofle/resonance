@@ -6,7 +6,7 @@ const ok=(c,m)=>{console.log((c?'PASS ':'FAIL ')+m);if(!c)process.exitCode=1};
 (async()=>{
  const runs=[['chromium',{executablePath:'/usr/bin/google-chrome'},{}],['webkit',{},{}],['webkit',{},{viewport:{width:390,height:844},hasTouch:true,isMobile:true,deviceScaleFactor:3}]];
  for(const [name,lo,ctxo] of runs){const tag=name+(ctxo.hasTouch?' (touch/iPhone-size)':'');
-  const b=await pw[name].launch(lo);const c=await b.newContext(ctxo);const p=await c.newPage();const errs=[];p.on('pageerror',e=>errs.push(e.message));
+  const b=await pw[name].launch(lo);const c=await b.newContext(ctxo);await c.addInitScript(()=>{if(!localStorage.res2Hints)localStorage.res2Hints='[0,1,2,3,4,5,6,7,8,9]'});const p=await c.newPage();const errs=[];p.on('pageerror',e=>errs.push(e.message));
   await p.goto('http://localhost:8765/index.html');await p.waitForTimeout(800);
   const pre=await p.evaluate(()=>({ac:AC===null,banner:!document.getElementById('unlock').hidden,icon:document.getElementById('sound').textContent,st:document.getElementById('sound').dataset.state,fb:!!(window.AudioContext||window.webkitAudioContext)}));
   ok(pre.ac&&pre.banner&&pre.icon==='🔇'&&pre.st==='none',`${tag}: no AudioContext before a gesture, "Tap to enable sound" shown, icon 🔇`);
