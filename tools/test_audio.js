@@ -1,15 +1,19 @@
+// Renders level 3 offline in Chrome with the game's own synth: the winning chain (+ win chord) and a
+// full-coverage decoy chain (wrong melody -> clash sounds). Writes level3_solve.wav, level3_decoy.wav + expectations.
 const {chromium}=require('playwright-core');const fs=require('fs');
-(async()=>{const b=await chromium.launch({executablePath:'/usr/bin/google-chrome'});const p=await b.newPage();
- await p.goto('http://localhost:8765/index.html');
- const r=await p.evaluate(async()=>{load(3);let sx,sy;grid.forEach((r,y)=>r.forEach((c,x)=>{if(c&&simulate(grid,x,y).solved){sx=x;sy=y}}));
-  const {ev}=simulate(grid,sx,sy);const SR=44100;const last=ev[ev.length-1].beat*.18;const winT=last+.5;
-  AC=new OfflineAudioContext(1,Math.ceil(SR*(winT+3)),SR);MASTER=master(AC);
-  let n=0;const exp=[];ev.forEach(e=>{if(e.muted)return;exp.push({t:e.beat*.18,i:n});note(n++,e.beat*.18)});
-  // win(): chord notes [0,2,3,5] staggered 60ms, vol .18, dur 2.4
-  [0,2,3,5].forEach((s,i)=>{note(s,winT+i*.06,.18,2.4);exp.push({t:winT+i*.06,i:s,win:1})});
-  const buf=await AC.startRendering();return{data:Array.from(buf.getChannelData(0)),exp,SR,tap:[sx+1,sy+1]}});
- const d=r.data,SR=r.SR,h=Buffer.alloc(44+d.length*2);
- h.write('RIFF',0);h.writeUInt32LE(36+d.length*2,4);h.write('WAVEfmt ',8);h.writeUInt32LE(16,16);h.writeUInt16LE(1,20);h.writeUInt16LE(1,22);h.writeUInt32LE(SR,24);h.writeUInt32LE(SR*2,28);h.writeUInt16LE(2,32);h.writeUInt16LE(16,34);h.write('data',36);h.writeUInt32LE(d.length*2,40);
- d.forEach((v,i)=>h.writeInt16LE(Math.max(-32768,Math.min(32767,Math.round(v*32767))),44+i*2));
- fs.writeFileSync('level4_solve.wav',h);fs.writeFileSync('tools/level4_expected.json',JSON.stringify({exp:r.exp,tap:r.tap,peakFloat:d.reduce((m,v)=>Math.max(m,Math.abs(v)),0)}));
- console.log('tap',r.tap,'notes',r.exp.length);await b.close()})();
+function wav(path,d,SR){const h=Buffer.alloc(44+d.length*2);h.write('RIFF',0);h.writeUInt32LE(36+d.length*2,4);h.write('WAVEfmt ',8);h.writeUInt32LE(16,16);h.writeUInt16LE(1,20);h.writeUInt16LE(1,22);h.writeUInt32LE(SR,24);h.writeUInt32LE(SR*2,28);h.writeUInt16LE(2,32);h.writeUInt16LE(16,34);h.write('data',36);h.writeUInt32LE(d.length*2,40);
+ d.forEach((v,i)=>h.writeInt16LE(Math.max(-32768,Math.min(32767,Math.round(v*32767))),44+i*2));fs.writeFileSync(path,h)}
+(async()=>{const b=await chromium.launch({executablePath:'/usr/bin/google-chrome'});const p=await b.newPage();await p.goto('http://localhost:8765/index.html');
+ const out=await p.evaluate(async()=>{load(2);const tgt=LEVELS[li].melody;const SR=44100;const res={};
+  const cfgs=[];for(let y=0;y<N;y++)for(let x=0;x<N;x++)if(grid[y][x]){const r=simulate(grid,x,y);if(r.solved)cfgs.push({x,y,r,win:melodyEq(r.melody,tgt)})}
+  for(const kindName of ['solve','decoy']){const c=cfgs.find(c=>c.win===(kindName==='solve'));const r=c.r;const beats=Math.max(r.melody.length,tgt.length);
+   AC=new OfflineAudioContext(1,Math.ceil(SR*((beats-1)*.18+3.5)),SR);MASTER=master(AC);
+   // same scheduling as play(): tile notes per beat, clash on wrong beats, thud for absorbed mute hits
+   for(let bt=0;bt<beats;bt++){const good=chordEq(r.melody[bt]||[],tgt[bt]||[]);const t=bt*BEAT/1000;
+    r.ev.filter(e=>e.beat===bt).forEach(e=>{const cc=grid[e.y][e.x];if(e.muted){thud(t);return}note(cc.p,t);if(!good)clash(cc.p,t)})}
+   if(c.win)[0,2,4,5].forEach((q,i)=>note(q,(beats-1)*.18+.5+i*.06,.18,2.4));
+   const buf=await AC.startRendering();res[kindName]={data:Array.from(buf.getChannelData(0)),melody:r.melody,tap:[c.x+1,c.y+1],beats}}
+  return{res,tgt,SR}});
+ for(const k of ['solve','decoy'])wav(`level3_${k}.wav`,out.res[k].data,out.SR);
+ fs.writeFileSync('tools/level3_expected.json',JSON.stringify({target:out.tgt,solve:{melody:out.res.solve.melody,tap:out.res.solve.tap},decoy:{melody:out.res.decoy.melody,tap:out.res.decoy.tap}}));
+ console.log('solve tap',out.res.solve.tap,'decoy tap',out.res.decoy.tap,'target',JSON.stringify(out.tgt),'decoy',JSON.stringify(out.res.decoy.melody));await b.close()})();
