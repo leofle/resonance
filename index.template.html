@@ -92,7 +92,7 @@ function note(p,t=0,vol=.22,dur=1.4){if(!soundOn)return;const a=ac(),o=a.createO
 // wrong beat: a short harsh minor-second cluster (sawtooth a semitone above + below the played note) so the error is audible
 function clash(p,t=0){if(!soundOn)return;const a=ac(),s=a.currentTime+t,f=freq(p);
  [f*Math.pow(2,1/12),f*Math.pow(2,-1/12)].forEach(fr=>{const o=a.createOscillator(),g=a.createGain();o.type='sawtooth';o.frequency.value=fr;
-  g.gain.setValueAtTime(0,s);g.gain.linearRampToValueAtTime(.07,s+.01);g.gain.exponentialRampToValueAtTime(.0001,s+.35);o.connect(g);g.connect(MASTER);o.start(s);o.stop(s+.36)})}
+  g.gain.setValueAtTime(0,s);g.gain.linearRampToValueAtTime(.09,s+.01);g.gain.exponentialRampToValueAtTime(.0001,s+.35);o.connect(g);g.connect(MASTER);o.start(s);o.stop(s+.36)})}
 function thud(t=0){if(!soundOn)return;const a=ac(),o=a.createOscillator(),g=a.createGain(),s=a.currentTime+t;o.frequency.value=90;g.gain.setValueAtTime(.15,s);g.gain.exponentialRampToValueAtTime(.001,s+.2);o.connect(g);g.connect(MASTER);o.start(s);o.stop(s+.2)}
 function playMelody(m,t0=0){m.forEach((ch,i)=>ch.forEach(p=>note(p,t0+i*BEAT/1000)))}
 const ARROW={'>':0,'v':90,'<':180,'^':270};
