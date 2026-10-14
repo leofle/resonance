@@ -18,8 +18,8 @@ h1{margin:0;font-weight:300;letter-spacing:.4em;font-size:16px}
 .tile:hover{transform:scale(1.03)}
 .tile:active{filter:brightness(1.25)}   /* no scale on press: a shrinking tile made edge clicks miss */
 .tile svg{position:relative;z-index:1;width:46%;height:46%;transition:transform .2s cubic-bezier(.3,1.6,.5,1);filter:drop-shadow(0 0 4px #fff3)}
-.tile.rung{background:hsl(var(--h),80%,60%);animation:ring .45s ease-out;box-shadow:inset 0 0 18px 4px #fff9,0 0 0 2px #fff}
-.tile.rung.past{background:hsl(var(--h),35%,34%);box-shadow:inset 0 0 0 2px hsl(var(--h),60%,55%);animation:none}
+.tile.rung{background:#5a78c8;animation:ring .45s ease-out;box-shadow:inset 0 0 18px 4px #fff9,0 0 0 2px #fff}
+.tile.rung.past{background:#3a4268;box-shadow:inset 0 0 0 2px #8ef0ff88;animation:none}
 .tile.rung.past svg{stroke:#ffffffaa}
 .beatno{position:absolute;top:3px;left:3px;z-index:4;font:800 15px/20px system-ui;min-width:22px;padding:0 6px;text-align:center;border-radius:8px;background:#000c;color:#fff;opacity:1;pointer-events:none}
 .past .beatno{opacity:.9}
@@ -37,7 +37,7 @@ h1{margin:0;font-weight:300;letter-spacing:.4em;font-size:16px}
 .tile.delay .beatno{left:50%;transform:translateX(-50%);top:3px;padding:0 8px;letter-spacing:.04em;white-space:nowrap}
 .tile.rotable{background:conic-gradient(from 0deg,#2b2350,#4a3d12,#2b2350,#4a3d12,#2b2350);box-shadow:inset 0 0 0 3px #f7c948}
 .tile.mute.rung.past,.tile.delay.rung.past{filter:saturate(.6)}
-.tile.mute.rung,.tile.delay.rung,.tile.rotable.rung{background:hsl(var(--h),80%,60%)}
+.tile.mute.rung,.tile.delay.rung,.tile.rotable.rung{background:#5a78c8}
 .tile.silent{animation:silent .4s ease-in-out 3 alternate;box-shadow:inset 0 0 0 4px #ff3b5c,0 0 0 2px #fff!important}
 @keyframes silent{from{box-shadow:inset 0 0 0 4px #ff3b5c,0 0 0 2px #fff}to{box-shadow:inset 0 0 0 4px #fff,0 0 0 2px #ff3b5c}}
 #msg{min-height:22px;margin:4px 0 4px;font-size:15px;font-weight:800;letter-spacing:.03em;color:#ffb199;text-shadow:0 0 8px #ff6a4d88,0 1px 2px #000;opacity:0;transition:opacity .2s}#msg.show{opacity:1}
@@ -51,7 +51,7 @@ h1{margin:0;font-weight:300;letter-spacing:.4em;font-size:16px}
 .badge{position:absolute;font-size:12px;bottom:4px;right:6px;font-weight:700}
 .rot{position:absolute;top:2%;right:2%;width:28%;height:28%;border-radius:50%;background:#f7c948;color:#222;font-weight:800;font-size:calc(var(--s)*.24);line-height:calc(var(--s)*.28);text-align:center;cursor:pointer;box-shadow:0 2px 8px #0008;z-index:3}
 .rot:active{transform:scale(.85)}
-.wave{position:absolute;border-radius:50%;pointer-events:none;border:3px solid hsl(var(--h),90%,70%);animation:wave .9s ease-out forwards;z-index:2}
+.wave{position:absolute;border-radius:50%;pointer-events:none;border:3px solid #8ef0ff;animation:wave .9s ease-out forwards;z-index:2}
 @keyframes ring{0%{transform:scale(1)}35%{transform:scale(1.05)}100%{transform:scale(1)}}
 @keyframes wave{from{width:0;height:0;opacity:.9;margin:0}to{width:160px;height:160px;margin:-80px;opacity:0}}
 @keyframes shake{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
@@ -77,11 +77,11 @@ button:hover{background:#ffffff22}
 #strip.more-l{-webkit-mask-image:linear-gradient(90deg,transparent,#000 34px);mask-image:linear-gradient(90deg,transparent,#000 34px)}
 #strip.more-l.more-r{-webkit-mask-image:linear-gradient(90deg,transparent,#000 34px,#000 calc(100% - 34px),transparent);mask-image:linear-gradient(90deg,transparent,#000 34px,#000 calc(100% - 34px),transparent)}
 #strip .col{position:relative;height:100%;display:flex;align-items:flex-end;gap:3px;padding:0 4px;border-radius:8px;background:#ffffff0d;box-shadow:inset 0 -2px 0 #ffffff55;transition:background .15s}
-#strip .col i{display:block;width:14px;border-radius:4px 4px 1px 1px;background:hsl(var(--h),95%,62%);box-shadow:0 0 0 1.5px #05040c,0 0 0 2.5px #ffffffcc}
+#strip .col i{display:block;width:14px;border-radius:4px 4px 1px 1px;background:#d8d4ff;box-shadow:0 0 0 1.5px #05040c,0 0 0 2.5px #ffffffaa}
 #strip .col.hl{background:#ffffff40}
 .slot{background:#ffffff05;box-shadow:inset 0 0 0 1px #ffffff0d;border-radius:12px}
 /* pitch bar: hidden until the tile has rung once in this level; height = pitch */
-.pb{position:absolute;left:7%;bottom:7%;width:20%;border-radius:4px 4px 2px 2px;background:hsl(var(--h),95%,62%);box-shadow:0 0 0 1.5px #05040c,0 0 0 2.5px #fffc;z-index:3;pointer-events:none}
+.pb{position:absolute;left:7%;bottom:7%;width:20%;border-radius:4px 4px 2px 2px;background:#d8d4ff;box-shadow:0 0 0 1.5px #05040c,0 0 0 2.5px #fffc;z-index:3;pointer-events:none}
 </style></head><body>
 <header><h1>RESONANCE</h1><div id="lvl"></div><nav id="dots" aria-label="Levels"></nav></header>
 <div id="msg" aria-live="polite" aria-hidden="true"></div>
@@ -168,7 +168,7 @@ function fitStrip(){S.style.width=B.offsetWidth+'px';TR.classList.remove('fill')
  S.addEventListener('click',()=>{if(clean){clean=false;listen()}});
  S.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();listen()}})}
 // hint popover: auto-shown once per device on levels that introduce a mechanic; '?' reopens; tap or first move dismisses
-const HINT_AUTO=[0,1,2,4,5,6];   // basics, gaps, split, mute, delay, dial
+const HINT_AUTO=[0,1,2,3,5,6];   // basics, gaps, dial, split, mute, delay
 const HP=document.getElementById('hintpop');
 function seenHints(){try{return JSON.parse(localStorage[KEY+'Hints']||'[]')}catch(e){return[]}}
 function showHint(){HP.innerHTML=`${LEVELS[li].hint}<small>Tap to close · ? to reopen</small>`;HP.hidden=false}
@@ -183,7 +183,7 @@ function load(i){clearTimers();shown=new Set();sel=null;previewsLeft=PREVIEW_LIM
  document.querySelectorAll('#dots .dot').forEach(e=>e.onclick=()=>{document.getElementById('win').style.display='none';load(+e.dataset.j)});
  if(audioReady())later(listen,350);else soundUI()}   // auto-play the tune only once sound is unlocked; never creates the context
 // melody strip: one column per beat, one bar per note (bar height + colour = pitch; chord notes side by side). No digits.
-function strip(){const m=LEVELS[li].melody;TR.innerHTML=m.map((ch,i)=>`<div class="col" id="b${i}">${ch.map(p=>`<i style="--h:${HUE[p]};height:${PH(p)}%"></i>`).join('')}</div>`).join('')}
+function strip(){const m=LEVELS[li].melody;TR.innerHTML=m.map((ch,i)=>`<div class="col" id="b${i}">${ch.map(p=>`<i style="height:${PH(p)}%"></i>`).join('')}</div>`).join('')}
 let LT=[];   // Listen highlight timers: cancelled (and the highlight cleared) when a chain starts or the level reloads
 function listen(){if(busy)return;unlock();LT.forEach(clearTimeout);LT=[];clearStrip();playMelody(LEVELS[li].melody);const cols=[...document.querySelectorAll('#strip .col')];
  cols.forEach((c,i)=>LT.push(later(()=>{clearStrip();c.classList.add('hl');follow(i)},i*BEAT)));LT.push(later(clearStrip,cols.length*BEAT));LT.push(later(()=>setTrack(0),cols.length*BEAT+400))}
@@ -197,7 +197,7 @@ function render(){clearTimeout(LP);const s=tileSize();
   if(!c){d.className+=' slot';B.appendChild(d);return}
   const k=kind(c);d.className+=' tile'+(k==='split'||k==='arrow'?'':' '+(k==='rot'?'rotable':k));
   d.innerHTML=(k==='delay'?HG:'')+svgFor(c)+(shown.has(x+','+y)?pbar(c.p):'')+(k==='delay'?'<span class="dl">+1 beat</span>':'')+(k==='mute'?'<span class="badge" style="background:#05040c;padding:0 3px;border-radius:4px">×2</span>':'');
-  d.style.setProperty('--h',HUE[c.p]);
+
   if(k==='rot'){const b=document.createElement('div');b.className='rot';b.textContent='↻';b.title='Rotate clockwise (right-click / long-press tile: counter-clockwise)';
    b.onpointerdown=e=>e.stopPropagation();b.onclick=e=>{e.stopPropagation();turn(x,y,1)};d.appendChild(b);
    d.oncontextmenu=e=>{e.preventDefault();clearTimeout(LP);if(!longFired)turn(x,y,3)};
@@ -238,7 +238,7 @@ function turn(x,y,k){clearTimeout(LP);if(busy)return;hideHint();const c=grid[y][
 function clearPreview(){document.querySelectorAll('.ghost').forEach(e=>e.classList.remove('ghost'))}
 function preview(x,y){if(busy)return;clearPreview();if(!grid[y][x])return;
  targets(grid,x,y).forEach(([a,b])=>document.getElementById(`c${a}_${b}`).classList.add('ghost'))}
-function wave(el){const w=document.createElement('div');w.className='wave';w.style.left='50%';w.style.top='50%';w.style.setProperty('--h',el.style.getPropertyValue('--h'));el.appendChild(w);later(()=>w.remove(),900)}
+function wave(el){const w=document.createElement('div');w.className='wave';w.style.left='50%';w.style.top='50%';el.appendChild(w);later(()=>w.remove(),900)}
 function play(x,y){if(busy||kind(grid[y][x])==='rot')return;hideHint();setTimeout(playUI);busy=true;clearPreview();ac();const r=simulate(grid,x,y),ev=r.ev,tgt=LEVELS[li].melody;
  LT.forEach(clearTimeout);LT=[];clearStrip();hideBars();
  const beats=Math.max(r.melody.length,tgt.length);

@@ -44,6 +44,12 @@ const FIND=`(want)=>{const P=[];grid.forEach((r,y)=>r.forEach((c,x)=>{if(c&&kind
   const sepOK=r.cols.every(c=>c.every((b,k)=>k===0||b.l>=c[k-1].r+2)&&c.every(b=>b.w>=10));
   const hOK=r.cols.every((c,j)=>c.every((b,k)=>Math.abs(b.h-r.want[j][k]/100*(r.H-20))<2.5));
   ok(!/\d/.test(r.strip)&&!/\d/.test(r.tileTxt)&&r.dp===0&&r.pb===0&&sepOK&&hOK&&r.H>=115,`L${i+1}: no digits on strip/tiles, no pitch shown before ringing, bars height=pitch, chord bars side by side (strip ${r.H}px)`)}
+ // v2.7: no pitch colours anywhere: strip bars, tile bars, rung tiles and waves share one colour; pitch = height only
+ {await go(4);const s0=(await find('win'))[0];await p.evaluate(s=>{s.P.forEach(([x,y],i)=>{for(let k=0;k<s.ks[i];k++)rotate(grid[y][x])});render()},s0);await p.click(`#c${s0.x}_${s0.y}`);await p.click('#play');await p.waitForTimeout(700);
+  const col=await p.evaluate(()=>{const st=document.createElement('style');st.textContent='*{transition:none!important;animation:none!important}';document.head.appendChild(st);document.body.offsetWidth;const cs=e=>getComputedStyle(e).backgroundColor;const sb=[...document.querySelectorAll('#strip .col i')].map(cs),pb=[...document.querySelectorAll('.pb')].map(cs),byKind=sel=>{const m={};document.querySelectorAll(sel).forEach(e=>{const k=e.className.replace(/\b(sel|pv|ghost|silent|muted-hit)\b/g,'').trim();(m[k]=m[k]||[]).push(cs(e))});return Object.values(m)},rg=byKind('.tile.rung:not(.past)'),ps=byKind('.tile.rung.past'),wv=[...document.querySelectorAll('.wave')].map(e=>getComputedStyle(e).borderTopColor);
+   const one=a=>new Set(a).size<=1;st.remove();return{ok:one(sb)&&one(pb)&&rg.every(one)&&ps.every(one)&&one(wv),n:[sb.length,pb.length,rg.flat().length,ps.flat().length,wv.length],pitches:new Set(LEVELS[li].melody.flat()).size}});
+  ok(col.ok&&col.n[0]>3&&col.n[1]>3&&col.pitches>2,`one neutral colour for strip bars, tile bars, rung/past tiles and waves (${col.n.join('/')} elements, ${col.pitches} pitches)`);
+  await p.waitForFunction(()=>!busy||document.getElementById('win').style.display==='flex',null,{timeout:10000});await p.evaluate(()=>{document.getElementById('win').style.display='none'})}
  // pitch revealed after a tile rings; survives fail-reset + Restart; resets on level change
  await go(0);const sol1=(await find('win'))[0];const wrong1=await p.evaluate(s=>{for(let y=0;y<N;y++)for(let x=0;x<N;x++)if(grid[y][x]&&!(x===s.x&&y===s.y))return{x,y}},sol1);
  await p.click(`#c${wrong1.x}_${wrong1.y}`);await p.click('#play');await p.waitForTimeout(200);
@@ -67,7 +73,7 @@ const FIND=`(want)=>{const P=[];grid.forEach((r,y)=>r.forEach((c,x)=>{if(c&&kind
  await go(0);await p.click(`#c${wrong1.x}_${wrong1.y}`);await p.click('#play');await p.waitForTimeout(300);await go(1);ok(await nb()===0,'bars reset on level change');
  // stale strip highlight: Listen interrupted by a tap, by Restart, and after normal end
  {const hl=()=>p.evaluate(()=>document.querySelectorAll('#strip .col.hl').length);await go(2);
-  await p.click('#strip');await p.waitForTimeout(400);await p.click('#c0_0');await p.waitForTimeout(1300);ok(await hl()===0,'Listen interrupted by a tap leaves no highlighted column');
+  await p.click('#strip');await p.waitForTimeout(400);{const t=await p.evaluate(()=>[...document.querySelectorAll('.tile:not(.rotable)')][0].id);await p.click('#'+t);await p.click('#play')}await p.waitForTimeout(1300);ok(await hl()===0,'Listen interrupted by ▶ Play leaves no highlighted column');
   await p.waitForFunction(()=>!busy,null,{timeout:8000});await p.click('#strip');await p.waitForTimeout(400);await p.click('#restart');await p.waitForTimeout(600+await p.evaluate(()=>LEVELS[li].melody.length*180));
   ok(await hl()===0,'Listen interrupted by Restart leaves no highlighted column (after the auto-Listen too)');
   await p.click('#strip');await p.waitForTimeout(250+await p.evaluate(()=>LEVELS[li].melody.length*180));ok(await hl()===0,'no highlighted column after Listen ends')}
@@ -116,7 +122,7 @@ const FIND=`(want)=>{const P=[];grid.forEach((r,y)=>r.forEach((c,x)=>{if(c&&kind
   await p.mouse.click(db.x+db.width*.35,db.y+db.height*.6);await p.waitForTimeout(80);const T1=await toks();
   ok(T1!==T0&&!(await p.evaluate(()=>busy||!!document.querySelector('.rung'))),'click on dial body rotates CW, never starts a chain');
   await p.evaluate(id=>{const [x,y]=id.slice(1).split('_').map(Number);play(x,y)},did);ok(!(await p.evaluate(()=>busy)),'play() refuses a dial as start');
-  ok(/never start/.test(await p.evaluate(()=>LEVELS[li].hint)),'level 7 hint says dials never start the chain');await p.click('#restart')}
+  ok(/never start/.test(await p.evaluate(()=>LEVELS[2].hint)),'level 3 (dial intro) hint says dials never start the chain');await p.click('#restart')}
  // v2.5: strip tap replays the tune, drag does not, keyboard works; ♪ affordance; role=button
  {await go(8);await p.waitForTimeout(2200);const hl=()=>p.evaluate(()=>document.querySelectorAll('#strip .col.hl').length);
   const sb=await (await p.$('#strip')).boundingBox();await p.mouse.click(sb.x+sb.width/2,sb.y+sb.height/2);await p.waitForTimeout(100);
@@ -135,15 +141,15 @@ const FIND=`(want)=>{const P=[];grid.forEach((r,y)=>r.forEach((c,x)=>{if(c&&kind
  // hint popover: auto on mechanic levels once per device, tap / first move dismisses, ? reopens, no layout shift
  {const st=()=>p.evaluate(()=>!document.getElementById('hintpop').hidden);const geo=()=>p.evaluate(()=>JSON.stringify([board.getBoundingClientRect(),S.getBoundingClientRect()]));
   await p.evaluate(()=>{localStorage.res2Hints='[]'});await go(1);const g0=await geo();await p.evaluate(()=>hideHint());const g1=await geo();
-  await p.evaluate(()=>{localStorage.res2Hints='[]'});await go(2);ok(await st()&&/split/i.test(await p.evaluate(()=>hintpop.textContent)),'L3 (new mechanic) shows the hint popover on first visit');
+  await p.evaluate(()=>{localStorage.res2Hints='[]'});await go(2);ok(await st()&&/dial/i.test(await p.evaluate(()=>hintpop.textContent)),'L3 (new mechanic: dial) shows the hint popover on first visit');
   ok(g0===g1,'popover does not shift the layout');
   await p.click('#hintpop');ok(!(await st()),'tap dismisses the popover');await go(3);await go(2);ok(!(await st()),'shown only once per level per device');
-  await go(3);ok(!(await st()),'L4 (no new mechanic) does not auto-show');await p.click('#help');ok(await st()&&/Listen|only one/i.test(await p.evaluate(()=>hintpop.textContent)),'? reopens the hint on any level');
+  await go(4);ok(!(await st()),'L5 (no new mechanic) does not auto-show');await p.click('#help');ok(await st()&&/Listen|only one/i.test(await p.evaluate(()=>hintpop.textContent)),'? reopens the hint on any level');
   await p.click('#help');ok(!(await st()),'? toggles it closed');await p.click('#help');
   const t0=await p.evaluate(()=>{for(let y=0;y<N;y++)for(let x=0;x<N;x++)if(grid[y][x]&&y>=3)return 'c'+x+'_'+y});await p.click('#'+t0);ok(!(await st()),'first move dismisses the popover');
   await p.waitForFunction(()=>!busy,null,{timeout:8000});
   const auto=await p.evaluate(()=>{const out=[];for(let i=0;i<10;i++){localStorage.res2Hints='[]';load(i);if(!hintpop.hidden)out.push(i+1)}localStorage.res2Hints='[0,1,2,3,4,5,6,7,8,9]';hideHint();return out});
-  ok(JSON.stringify(auto)==='[1,2,3,5,6,7]',`auto-shown on levels ${auto} (new mechanics: basics, gaps, split, mute, delay, dial)`)}
+  ok(JSON.stringify(auto)==='[1,2,3,4,6,7]',`auto-shown on levels ${auto} (new mechanics: basics, gaps, dial, split, mute, delay)`)}
  // v2.6: tap = select + preview (no chain/bar/attempt); ▶ Play runs it; keyboard; preview cap
  {await go(2);await p.waitForTimeout(2200);/* let the auto-Listen finish */await p.evaluate(()=>{window.NOTES=[];const o=note;window.note=(...a)=>{NOTES.push(a[0]);return o(...a)}});
   ok(await p.evaluate(()=>document.getElementById('play').disabled),'▶ Play disabled with nothing selected');
