@@ -201,11 +201,11 @@ const ARROW={'>':0,'v':90,'<':180,'^':270};
 function svgFor(c){const k=kind(c);const sw='stroke="#e9e6ff" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"';
  if(k==='split'){const r=c.t==='S|'?90:0;return `<svg viewBox="0 0 24 24" ${sw} style="transform:rotate(${r}deg)"><path d="M2 12h20M6 8l-4 4 4 4M18 8l4 4-4 4"/></svg>`}
  const d=c.t[c.t.length-1];return `<svg viewBox="0 0 24 24" ${sw} style="transform:rotate(${ARROW[d]}deg)"><path d="M4 12h15M13 6l6 6-6 6"/></svg>`}
-const KEY='res213';   // v2.13: per-level lives + dials + lock persist; v2.12: win = tune right (silent tiles allowed), L5/L9/L10 re-pitched, lives + score; older progress is ignored
+const KEY='res214';   // v2.14: taps during a chain select at once + safety net; v2.13: per-level lives + dials + lock persist; v2.12: win = tune right (silent tiles allowed), L5/L9/L10 re-pitched, lives + score; older progress is ignored
 let li=0,grid,history=[],busy=false,done=JSON.parse(localStorage[KEY+'Done']||'[]');
 // ---- lives + points: 3 lives per level (reset on level load); a life is lost only by a ▶ Play that doesn't win.
 // Clear = 100 + 50 per life left. Best per level kept in KEY+'Best'; header total = sum of bests.
-const LIVES=3;let lives=LIVES,locked=false,lastFail=null,pendingPick=null,lastScore=0;
+const LIVES=3;let lives=LIVES,locked=false,lastFail=null,pendingPick=null,lastScore=0,lastPointed=null;
 function bests(){try{return JSON.parse(localStorage[KEY+'Best']||'{}')||{}}catch(e){return{}}}
 const total=()=>Object.values(bests()).reduce((a,b)=>a+(+b||0),0);
 const pointsFor=l=>100+50*l;
@@ -253,7 +253,7 @@ function hideHint(){HP.hidden=true}
 function hideMsg(){const m=document.getElementById('msg');m.classList.remove('show');m.textContent='';m.setAttribute('aria-hidden','true')}
 HP.addEventListener('pointerdown',e=>{e.stopPropagation();e.preventDefault()});HP.addEventListener('pointerup',e=>{e.stopPropagation();e.preventDefault();hideHint()});HP.addEventListener('touchend',e=>{e.stopPropagation();e.preventDefault();hideHint()},{passive:false});HP.addEventListener('click',e=>{e.stopPropagation();e.preventDefault();hideHint()});
 function load(i,keepLives){clearTimers();const st=keepLives||window.RES_FRESH_LOAD?null:states()[i];   // RES_FRESH_LOAD: legacy test hook (every load fresh, as before v2.13)
- if(!keepLives)lives=st&&st.lives>=0&&st.lives<=LIVES?st.lives:LIVES;locked=false;lastFail=null;pendingPick=null;document.getElementById('out').style.display='none';undoRestart=null;sel=null;previewsLeft=PREVIEW_LIMIT;li=i;localStorage[KEY+'Lvl']=i;grid=parse(LEVELS[i]);if(st&&st.dials)st.dials.forEach(([x,y,t])=>{const c=grid[y]&&grid[y][x];if(c&&kind(c)==='rot'&&/^R[<>^v]$/.test(t))c.t=t});history=[];busy=false;LP&&clearTimeout(LP);LP=null;longFired=false;
+ if(!keepLives)lives=st&&st.lives>=0&&st.lives<=LIVES?st.lives:LIVES;locked=false;lastFail=null;pendingPick=null;lastPointed=null;document.getElementById('out').style.display='none';undoRestart=null;sel=null;previewsLeft=PREVIEW_LIMIT;li=i;localStorage[KEY+'Lvl']=i;grid=parse(LEVELS[i]);if(st&&st.dials)st.dials.forEach(([x,y,t])=>{const c=grid[y]&&grid[y][x];if(c&&kind(c)==='rot'&&/^R[<>^v]$/.test(t))c.t=t});history=[];busy=false;LP&&clearTimeout(LP);LP=null;longFired=false;
  const m=document.getElementById('msg');m.classList.remove('show');m.textContent='';m.setAttribute('aria-hidden','true');
  render();strip();fitStrip();playUI();hud();saveState();
  if(!lives){locked=true;document.getElementById('out').style.display='flex'}
@@ -294,13 +294,16 @@ function render(){clearTimeout(LP);const s=tileSize();const HH=heardHere();
   if(sel&&sel.x===x&&sel.y===y)d.classList.add('sel');
   B.appendChild(d)}))}
 let LP=null,longFired=false;
+B.addEventListener('pointerdown',e=>{if(e.button)return;const t=e.target.closest&&e.target.closest('.tile');if(!t||t.classList.contains('rotable'))return;const [x,y]=t.id.slice(1).split('_').map(Number);lastPointed={x,y}},{capture:true});
 // ---- selection + preview, ▶ Play runs the chain from the selected tile ----
 let PREVIEW_LIMIT=new URLSearchParams(location.search).get('preview');PREVIEW_LIMIT=PREVIEW_LIMIT?+PREVIEW_LIMIT:null;   // null = unlimited previews
 let sel=null,previewsLeft=null,attempts=0,previews=0;
 function selectable(x,y){const c=grid[y]&&grid[y][x];return !!c&&kind(c)!=='rot'}
 function setSel(x,y){document.querySelectorAll('.tile.sel').forEach(e=>e.classList.remove('sel'));sel=x==null?null:{x,y};
  if(sel){const el=document.getElementById(`c${x}_${y}`);if(el)el.classList.add('sel')}playUI()}
-function pick(x,y){if(locked||!selectable(x,y))return;if(busy){pendingPick=[x,y];return}   // a tap while the chain is still sounding is applied the moment it ends (was dropped)
+// v2.14: a tap while the chain is still sounding selects AT ONCE (it used to be queued until the chain ended: the old
+// tile stayed selected/highlighted for up to ~0.7s and a Play in that window used it). No queue any more.
+function pick(x,y){if(locked||!selectable(x,y))return;if(busy){setSel(x,y);return}
  hideHint();setSel(x,y);
  if(PREVIEW_LIMIT!=null){if(previewsLeft<=0){thud();playUI();return}previewsLeft--}
  previews++;note(grid[y][x].p);const el=document.getElementById(`c${x}_${y}`);if(el){el.classList.remove('pv');void el.offsetWidth;el.classList.add('pv')}
@@ -310,7 +313,7 @@ function playUI(){const b=document.getElementById('play');if(!b)return;b.disable
  b.textContent=busy?'Playing…':'▶ Play';b.title=busy?'Playing…':sel?'Ring the chain from the selected tile (P / Enter)':'Select a tile first: tap it to hear its note';b.style.cursor=busy?'wait':'';
  const c=document.getElementById('pvc');if(c){c.hidden=PREVIEW_LIMIT==null;c.textContent=PREVIEW_LIMIT==null?'':`👂 ${previewsLeft}`;c.title=`${previewsLeft} preview${previewsLeft===1?'':'s'} left this attempt`}}
 function note2(t){const m=document.getElementById('msg');m.textContent=t;m.classList.add('show');m.removeAttribute('aria-hidden')}
-function playSel(){if(locked||busy)return;if(!sel){note2('Tap a tile first to choose where the chain starts');thud();return}
+function playSel(){if(locked||busy)return;if(!sel){note2(grid.flat().some(c=>c&&kind(c)==='rot')?'Tap a tile first (dials only turn; they can\'t start the chain)':'Tap a tile first to choose where the chain starts');thud();return}
  // same start + same dials as the last failed Play: replay it for free (a repeat can't tell you anything new)
  const free=lastFail!==null&&sigNow()===lastFail;attempts++;previewsLeft=PREVIEW_LIMIT;play(sel.x,sel.y,free)}
 function moveSel(dx,dy){if(busy||locked)return;const T=[];grid.forEach((r,y)=>r.forEach((c,x)=>{if(selectable(x,y))T.push([x,y])}));if(!T.length)return;
@@ -333,7 +336,9 @@ function preview(x,y){if(busy||li>=4)return;clearPreview();   // dial-target out
  if(!grid[y][x])return;
  targets(grid,x,y).forEach(([a,b])=>document.getElementById(`c${a}_${b}`).classList.add('ghost'))}
 function wave(el){const w=document.createElement('div');w.className='wave';w.style.left='50%';w.style.top='50%';el.appendChild(w);later(()=>w.remove(),900)}
-function play(x,y,free){if(busy||locked||kind(grid[y][x])==='rot')return;pendingPick=null;const sig=sigNow();undoRestart=null;window.LASTPLAY={x,y};playId++;hideHint();setTimeout(playUI);busy=true;clearPreview();ac();const r=simulate(grid,x,y),ev=r.ev,tgt=LEVELS[li].melody;
+function play(x,y,free){if(busy||locked||kind(grid[y][x])==='rot')return;pendingPick=null;const sig=sigNow();
+ // safety net: the start must be the tile the user last physically pointed at / moved to; otherwise run it but free
+ if(lastPointed&&(lastPointed.x!==x||lastPointed.y!==y)){console.warn(`Resonance: Play started from (${x},${y}) but the last tile pointed at was (${lastPointed.x},${lastPointed.y}); no life charged`);free=true;window.MISMATCH=(window.MISMATCH||0)+1}undoRestart=null;window.LASTPLAY={x,y};playId++;hideHint();setTimeout(playUI);busy=true;clearPreview();ac();const r=simulate(grid,x,y),ev=r.ev,tgt=LEVELS[li].melody;
  LT.forEach(clearTimeout);LT=[];clearStrip();hideBars();hideMsg();
  const beats=Math.max(r.melody.length,tgt.length);
  for(let b=0;b<beats;b++){const here=ev.filter(e=>e.beat===b);
@@ -354,7 +359,6 @@ const rung=new Set(r.ev.filter(e=>!e.muted).map(e=>e.x+','+e.y));let n=0;
  if(free)parts.push('same setup as last try, no life lost');
  const m=document.getElementById('msg');m.textContent=parts.join(' · ');m.classList.add('show');m.removeAttribute('aria-hidden');
  if(locked){later(()=>{if(pid!==playId)return;document.getElementById('out').style.display='flex';document.getElementById('relevel').focus()},1400);return}
- if(pendingPick){const [px,py]=pendingPick;pendingPick=null;pick(px,py)}
  later(()=>{if(pid!==playId)return;document.querySelectorAll('.rung').forEach(e=>{e.style.transition='background 1s';e.classList.remove('rung','past')});
   later(()=>{if(pid===playId&&!busy){resetTiles();playUI()}},700)},1200)}
 // back to the idle look in place (pitch bars of this attempt stay until the next attempt / Restart / rotate)
@@ -393,7 +397,7 @@ document.getElementById('undo').onclick=()=>{if(busy||locked)return;
 document.getElementById('sound').onclick=()=>{if(soundOn&&!audioReady()){unlock();return}soundOn=!soundOn;soundUI()};
 document.getElementById('unlock').onclick=()=>{unlock();soundOn=true;soundUI();setTimeout(()=>{if(!busy)listen()},60)};
 addEventListener('keydown',e=>{const tg=e.target;const onCtl=tg&&tg.closest&&tg.closest('button,#strip,[role=button]');
- if(e.key.startsWith('Arrow')){const m={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]}[e.key];if(!onCtl||tg===B){e.preventDefault();moveSel(...m)}}
+ if(e.key.startsWith('Arrow')){const m={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]}[e.key];if(!onCtl||tg===B){e.preventDefault();moveSel(...m);if(sel)lastPointed={...sel}}}
  if(e.key==='p'||e.key==='P'||(e.key==='Enter'&&!onCtl))playSel();
  if(e.key==='r')document.getElementById('restart').click();if(e.key==='z')document.getElementById('undo').click();if(e.key==='l')listen()});
 addEventListener('resize',()=>{if(!busy)render();fitStrip()});

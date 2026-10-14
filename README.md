@@ -79,3 +79,8 @@ node tools/test_sound.js      # audio unlock in Chrome + WebKit (desktop and iPh
 - Lives, dial orientations and the out-of-lives lock persist per level (level switches + reloads, key res213State). Only "Restart level" after 0 lives refills to 3 (new random dials); clearing a level drops its state so a replay starts at 3.
 - Heard pitches: tiles you have heard ring in a Play keep a neutral pitch bar (no beat number) forever per level (res213Heard), across Restart level, switches and reloads.
 - Tiles select on pointerdown (plus touch-action:manipulation), so a quick Play after a tap always uses the new tile.
+
+## v2.14
+- A tile click while a chain is still sounding (its ~0.5s tail after the last beat) now selects at once; it used to be queued, leaving the old tile selected. Play only ever reads the current selection.
+- Safety net: a Play whose start is not the tile last pointed at (raw pointerdown / arrow keys) runs but costs no life, with a console warning.
+- Play with nothing selected on a level with dials explains that dials cannot start the chain. Save key res214. Tests: tools/test_mouse.js (Chromium + WebKit desktop mouse).

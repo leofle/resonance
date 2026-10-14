@@ -3,17 +3,17 @@
 const pw=require('playwright-core');const ok=(c,m)=>{console.log((c?'PASS ':'FAIL ')+m);if(!c)process.exitCode=1};
 (async()=>{for(const [name,lo] of [['chromium',{executablePath:'/usr/bin/google-chrome'}],['webkit',{}]]){const b=await pw[name].launch(lo);
  for(const w of [320,360,375,390,414,430,768,1024,1280,1440]){const mob=w<1000;const c=await b.newContext({viewport:{width:w,height:mob?844:900},hasTouch:mob,isMobile:mob&&name==='chromium'});
-  await c.addInitScript(()=>{window.RES_FRESH_LOAD=1;if(!localStorage.res213Hints)localStorage.res213Hints='[0,1,2,3,4,5,6,7,8,9]'});const p=await c.newPage();await p.goto('http://localhost:8765/index.html');
+  await c.addInitScript(()=>{window.RES_FRESH_LOAD=1;if(!localStorage.res214Hints)localStorage.res214Hints='[0,1,2,3,4,5,6,7,8,9]'});const p=await c.newPage();await p.goto('http://localhost:8765/index.html');
   for(let L=0;L<10;L++){await p.evaluate(i=>load(i),L);await p.waitForTimeout(30);
    const r=await p.evaluate(()=>{const s=document.getElementById('strip').getBoundingClientRect(),bd=board.getBoundingClientRect(),bar=document.getElementById('bar');
     return{dl:Math.abs(s.left-bd.left),dr:Math.abs(s.right-bd.right),sw:document.documentElement.scrollWidth,iw:innerWidth,bsw:document.body.scrollWidth,
      listenInBar:!document.getElementById('listen')&&S.getAttribute('role')==='button'&&!!document.getElementById('help'),barBottom:bar.getBoundingClientRect().bottom,ih:innerHeight,barOK:[...bar.children].every(e=>{const q=e.getBoundingClientRect();return q.left>=0&&q.right<=innerWidth})}});
    if(L===5||!r.listenInBar||r.dl>1||r.dr>1||r.sw!==r.iw||!r.barOK||r.barBottom>r.ih||r.bsw>r.iw)ok(r.dl<=1&&r.dr<=1&&r.sw===r.iw&&r.bsw<=r.iw&&r.listenInBar&&r.barOK&&r.barBottom<=r.ih,`${name} ${w}px L${L+1}: strip edges = board (Δ${r.dl.toFixed(2)}/${r.dr.toFixed(2)}), scrollWidth ${r.sw}=${r.iw}, strip is the play button, ? in controls, controls on screen`)}
   ok(true,`${name} ${w}px: all 10 levels checked`);
-  {const ov=await p.evaluate(()=>{const bad=[];const R=id=>document.getElementById(id).getBoundingClientRect();for(let i=0;i<10;i++){localStorage.res213Hints='[]';load(i);showHint();const h=R('hud');
+  {const ov=await p.evaluate(()=>{const bad=[];const R=id=>document.getElementById(id).getBoundingClientRect();for(let i=0;i<10;i++){localStorage.res214Hints='[]';load(i);showHint();const h=R('hud');
     if(h.width<20||h.bottom>innerHeight||h.top<0)bad.push(`L${i+1} hud off screen`);
     for(const id of ['hintpop','board','strip','bar','dots','lvl']){const q=R(id);if(q.bottom>h.top&&q.top<h.bottom&&q.right>h.left&&q.left<h.right)bad.push(`L${i+1} hud overlaps ${id}`)}}
-   localStorage.res213Hints='[0,1,2,3,4,5,6,7,8,9]';hideHint();return bad});ok(!ov.length,`${name} ${w}px: lives + score (hud) on screen, clear of board, strip, controls, dots and hint popover on all levels ${ov.join(', ')}`)}
+   localStorage.res214Hints='[0,1,2,3,4,5,6,7,8,9]';hideHint();return bad});ok(!ov.length,`${name} ${w}px: lives + score (hud) on screen, clear of board, strip, controls, dots and hint popover on all levels ${ov.join(', ')}`)}
   if(w>=1024){const f=await p.evaluate(()=>{const out=[];for(let i=0;i<10;i++){load(i);const cols=[...TR.children].map(c=>c.getBoundingClientRect()),s=S.getBoundingClientRect();
      const ws=cols.map(c=>c.width);out.push({fill:TR.classList.contains('fill'),eq:Math.max(...ws)-Math.min(...ws)<1,span:Math.abs(cols[cols.length-1].right-(s.right-10))<1.5&&Math.abs(cols[0].left-(s.left+10))<1.5,min:Math.min(...ws),scroll:trackMax()>0})}return out});
    ok(f.every(r=>r.fill?r.eq&&r.span&&r.min>=28&&!r.scroll:r.scroll||r.min<28),`${name} ${w}px: strip columns spread evenly across the full width (${f.filter(r=>r.fill).length}/10 levels fill, min col ${Math.min(...f.map(r=>r.min)).toFixed(0)}px)`)}
@@ -31,7 +31,7 @@ const pw=require('playwright-core');const ok=(c,m)=>{console.log((c?'PASS ':'FAI
    await p.evaluate(()=>{load(li);let s=null;for(let y=0;y<N&&!s;y++)for(let x=0;x<N&&!s;x++)if(grid[y][x]&&kind(grid[y][x])!=='rot'){const r=simulate(grid,x,y);if(r.melody.length>=LEVELS[li].melody.length)s=[x,y]}if(s)play(...s)});
    let mx=0;for(let k=0;k<10;k++){await p.waitForTimeout(150);mx=Math.max(mx,await p.evaluate(()=>trackX))}ok(mx>0,`${name} ${w}px: track follows a chain too`)}
   else ok(await p.evaluate(()=>!S.classList.contains('more-r')),`${name} ${w}px: all beats fit, no scrolling/fade`);
-  if(name==='webkit'&&w===390){await p.evaluate(()=>{localStorage.res213Hints='[]';load(6)});await p.waitForTimeout(700);await p.screenshot({path:'/workspace/resonance_hint_mobile.png'});await p.click('#hintpop');await p.waitForTimeout(700);await p.screenshot({path:'/workspace/resonance_l7_mobile.png'})}
+  if(name==='webkit'&&w===390){await p.evaluate(()=>{localStorage.res214Hints='[]';load(6)});await p.waitForTimeout(700);await p.screenshot({path:'/workspace/resonance_hint_mobile.png'});await p.click('#hintpop');await p.waitForTimeout(700);await p.screenshot({path:'/workspace/resonance_l7_mobile.png'})}
   {const t=await p.evaluate(()=>tileSize());ok(t>=(w<500?Math.floor((w-6*5-24-12)/6):60),`${name} ${w}px: board fills the viewport (tile ${t}px)`)}
   await c.close()}
  await b.close()}})();
