@@ -36,7 +36,7 @@ function okCounts(g){const c=counts(g);return c.n>=sp.n[0]&&c.n<=sp.n[1]&&c.M===
 function evalS(g){const {out,maxR}=coverage(g);if(out.length-1<sp.minDec)return{s:-100+8*out.length+20*maxR/counts(g).n};let best=null;
  for(const c of out){if(c.beats.length<6||c.beats.length>9)continue;if(c.beats.filter(b=>b.length>1).length<sp.chords)continue;if(out.some(d=>d!==c&&d.sig===c.sig))continue;
   const sh3=c.shape.split(',').slice(0,3).join(',');const d3=out.filter(d=>d!==c&&d.shape.split(',').slice(0,3).join(',')===sh3).length;if(d3<2)continue;
-  const same=out.filter(d=>d!==c&&d.shape===c.shape).length,dec=out.length-1;const s=same-1.5*(dec-same)+2*Math.min(d3,4)-Math.max(0,dec-12);
+  const same=out.filter(d=>d!==c&&d.shape===c.shape).length,dec=out.length-1;const s=process.env.ALLSAME?same-4*(dec-same)+Math.min(d3,4)-Math.max(0,dec-12):same-1.5*(dec-same)+2*Math.min(d3,4)-Math.max(0,dec-12);
   if(!best||s>best.s)best={s,tg:c,same,dec,d3,out}}
  return best||{s:-50}}
 function randomBoard(){const g=Array.from({length:N},()=>Array(N).fill('.'));const n=ri(sp.n);const types=[];
@@ -74,6 +74,7 @@ outer:while(Date.now()-t0<T){let cur=randomBoard();let ce=evalS(cur);const tEnd=
   temp=Math.max(.2,temp*.999);
   if(ce.s>DBG.bestS)DBG.bestS=ce.s;
   if(ce.tg&&(!best||ce.s>best.st.s)){DBG.tg++;// try to finish this structure
+   if(process.env.ALLSAME&&ce.same!==ce.dec)continue;/* ALLSAME=1: every decoy must have the tune's notes-per-beat */
    const st=ce,g=cur.map(r=>r.slice());const pos=[];g.forEach((r,y)=>r.forEach((t,x)=>{if(t[0]==='R')pos.push([x,y])}));
    // scramble dials: initial = solved orientation rotated back by 1..3
    const g0=g.map(r=>r.slice());const goal=pos.map(([x,y],i)=>rotDir(g[y][x][1],st.tg.ks[i]));pos.forEach(([x,y],i)=>{g0[y][x]='R'+rotDir(goal[i],4-(1+Math.floor(Math.random()*3)))});
