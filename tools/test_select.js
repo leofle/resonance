@@ -7,7 +7,7 @@ const ok=(c,m)=>{console.log((c?'PASS ':'FAIL ')+m);if(!c)process.exitCode=1};
  const runs=[['chromium',{executablePath:'/usr/bin/google-chrome',args:['--autoplay-policy=no-user-gesture-required']},{viewport:{width:1280,height:900}},false],
   ['webkit',{},{viewport:{width:390,height:844},hasTouch:true,isMobile:true,deviceScaleFactor:3},true]];
  for(const [name,lo,co,touch] of runs){const b=await pw[name].launch(lo);const c=await b.newContext(co);
-  await c.addInitScript(()=>{if(!localStorage.res212Hints)localStorage.res212Hints='[0,1,2,3,4,5,6,7,8,9]'});const p=await c.newPage();
+  await c.addInitScript(()=>{window.RES_FRESH_LOAD=1;if(!localStorage.res213Hints)localStorage.res213Hints='[0,1,2,3,4,5,6,7,8,9]'});const p=await c.newPage();
   await p.goto('http://localhost:8765/index.html');await p.waitForTimeout(500);
   const tap=async id=>{const bb=await p.locator('#'+id).boundingBox();const x=bb.x+bb.width/2,y=bb.y+bb.height/2;if(touch)await p.touchscreen.tap(x,y);else await p.mouse.click(x,y)};
   for(let i=0;i<10;i++){await p.evaluate(i=>{load(i);LT.forEach(clearTimeout)},i);

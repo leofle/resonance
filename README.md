@@ -74,3 +74,8 @@ node tools/test_sound.js      # audio unlock in Chrome + WebKit (desktop and iPh
 - Points: clear = 100 + 50 per life left (250/200/150/100). Best per level kept; header-total = sum of bests. Save key res212.
 - Tap fixes: a tap during a sounding chain is applied when it ends; ▶ Play is never `disabled` (it swallowed clicks), with nothing selected it explains instead.
 - Tests: `tools/test_lives.js` (Chromium + WebKit touch).
+
+## v2.13
+- Lives, dial orientations and the out-of-lives lock persist per level (level switches + reloads, key res213State). Only "Restart level" after 0 lives refills to 3 (new random dials); clearing a level drops its state so a replay starts at 3.
+- Heard pitches: tiles you have heard ring in a Play keep a neutral pitch bar (no beat number) forever per level (res213Heard), across Restart level, switches and reloads.
+- Tiles select on pointerdown (plus touch-action:manipulation), so a quick Play after a tap always uses the new tile.
