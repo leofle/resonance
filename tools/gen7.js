@@ -7,10 +7,10 @@ const DV={'>':[1,0],'<':[-1,0],'^':[0,-1],'v':[0,1]};const A=Object.keys(DV);con
 const SPECS={
  l1:{n:[7,7],D:[0,0],M:[0,0],S:0,R:0,cov:[1,1],beats:[7,7]},
  l2:{n:[7,8],D:[0,0],M:[0,0],S:0,R:0,cov:[1,1],beats:[7,8],gaps:true},
- split:{n:[9,11],D:[0,0],M:[0,0],S:.4,R:0,cov:[2,99],beats:[6,8]},
+ split:{n:[9,11],D:[0,0],M:[0,0],S:.4,R:0,cov:[4,99],beats:[6,8],amb:true},
  branch:{n:[11,13],D:[0,0],M:[0,0],S:.45,R:0,cov:[3,99],beats:[6,8],amb:true},
- hush:{n:[10,12],D:[0,0],M:[1,1],S:.4,R:0,cov:[2,99],beats:[6,8]},
- delay:{n:[10,12],D:[1,1],M:[1,1],S:.35,R:0,cov:[2,99],beats:[6,8],loadD:true},
+ hush:{n:[10,12],D:[0,0],M:[1,1],S:.4,R:0,cov:[4,99],beats:[6,8],amb:true},
+ delay:{n:[10,12],D:[1,1],M:[1,1],S:.35,R:0,cov:[4,99],beats:[6,8],loadD:true,amb:true},
  turn:{n:[10,12],D:[0,0],M:[0,0],S:.35,R:2,cov:[3,99],beats:[6,8],amb:true},
  chorus:{n:[13,15],D:[1,1],M:[1,1],S:.4,R:1,cov:[3,99],beats:[6,8],loadD:true,amb:true},
  tuning:{n:[12,14],D:[0,0],M:[0,1],S:.4,R:3,cov:[3,99],beats:[6,8],amb:true},

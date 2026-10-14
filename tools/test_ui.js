@@ -38,21 +38,21 @@ const FIND=`(want)=>{const P=[];grid.forEach((r,y)=>r.forEach((c,x)=>{if(c&&kind
  // decoy: full coverage but wrong melody (level 3)
  await go(2);const dec=(await find('decoy'))[0];await applyAndTap(dec);await p.waitForSelector('#msg.show',{timeout:8000});
  const dm=await p.evaluate(()=>({t:msg.textContent,bad:document.querySelectorAll('#strip .col.bad').length,ok:document.querySelectorAll('#strip .col.ok').length,silent:document.querySelectorAll('.silent').length}));
- ok(/^melody off at beat \d+$/.test(dm.t)&&dm.bad>0&&dm.silent===0,`L3 decoy chain: "${dm.t}", strip ${dm.ok} ok / ${dm.bad} bad`);
+ const exp=await p.evaluate(s=>{const r=simulate(grid,s.x,s.y);const T=LEVELS[li].melody;return T.filter((c,i)=>chordEq(r.melody[i]||[],c)).length+' of '+T.length+' beats right'},dec);
+ ok(dm.t===exp&&dm.bad===0&&dm.ok===0&&dm.silent===0,`L3 decoy chain: "${dm.t}" (expected "${exp}"), no per-beat strip marks`);
  await p.screenshot({path:'tools/shots/decoy_L3.png'});
  await p.waitForFunction(()=>!busy,null,{timeout:8000});ok(await p.evaluate(()=>msg.textContent===''&&msg.getAttribute('aria-hidden')==='true'),'note cleared + aria-hidden after hide');
  // non-coverage failure: silent tiles highlighted (levels 4, 8, 10)
  for(const L of [3,7,9]){await go(L);const w=await p.evaluate(`(()=>{let best=null;for(let y=0;y<N;y++)for(let x=0;x<N;x++)if(grid[y][x]){const r=simulate(grid,x,y);if(!r.solved){const rung=new Set(r.ev.filter(e=>!e.muted).map(e=>e.x+','+e.y));const n=grid.flat().filter(Boolean).length-rung.size;if(!best||n<best.n)best={id:'c'+x+'_'+y,n}}}return best})()`);
   await p.click('#'+w.id);await p.waitForSelector('.tile.silent',{timeout:10000});
   const got=await p.evaluate(()=>({n:document.querySelectorAll('.tile.silent').length,msg:msg.textContent}));
-  ok(got.n===w.n&&got.msg.startsWith(`${w.n} tile${w.n===1?'':'s'} silent`),`L${L+1} silent tiles: ${got.n} / "${got.msg}"`);
+  ok(got.n===w.n&&/^\d+ of \d+ beats right · /.test(got.msg)&&got.msg.endsWith(`${w.n} tile${w.n===1?'':'s'} silent`),`L${L+1} silent tiles: ${got.n} / "${got.msg}"`);
   await p.screenshot({path:`tools/shots/fail_L${L+1}.png`});await p.waitForFunction(()=>!busy,null,{timeout:8000})}
  // solve every level through the UI
  for(let L=0;L<10;L++){await go(L);const sols=await find('win');ok(sols.length===1,`L${L+1}: exactly one winning config in page`);await applyAndTap(sols[0]);
   if(L===5){await p.waitForTimeout(700);ok(await p.evaluate(()=>[...document.querySelectorAll('.tile.delay')].every(t=>{const b=t.querySelector('.beatno'),d=t.querySelector('.dl');if(!b)return true;const r1=b.getBoundingClientRect(),r2=d.getBoundingClientRect(),T=t.getBoundingClientRect();return r1.bottom<=r2.top&&r1.left>=T.left&&r1.right<=T.right})),'delay a→b pill inside tile, no overlap with +1 beat')}
   if(L===7){await p.waitForTimeout(600);await p.screenshot({path:'tools/shots/chain_L8.png'})}
-  await p.waitForSelector('#win',{state:'visible',timeout:10000});const st=await p.evaluate(()=>[document.querySelectorAll('#strip .col.ok').length,LEVELS[li].melody.length]);
-  ok(st[0]===st[1],`level ${L+1} solved through UI, strip all ✓ (${st[0]}/${st[1]})`);
+  await p.waitForSelector('#win',{state:'visible',timeout:10000});ok(await p.evaluate(()=>!document.querySelector('#strip .col.ok,#strip .col.bad')),`level ${L+1} solved through UI (no strip marks)`);
   if(L===0){await p.click('#dots i[data-j="2"]');ok(await p.evaluate(()=>li===2&&document.getElementById('win').style.display==='none'&&!busy),'level dot clickable over RESOLVED overlay');continue}
   await p.click('#next');await p.waitForTimeout(50);ok(await p.evaluate(()=>li)===(L+1)%10,'Next advances (Play again wraps)')}
  ok(await p.evaluate(()=>!!MASTER),'master gain + limiter chain created');
