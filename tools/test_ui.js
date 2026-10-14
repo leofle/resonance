@@ -52,12 +52,36 @@ const FIND=`(want)=>{const P=[];grid.forEach((r,y)=>r.forEach((c,x)=>{if(c&&kind
  await p.waitForFunction(()=>!busy,null,{timeout:8000});
  const revealedIds=await p.evaluate(s=>{const r=simulate(grid,s.x,s.y);return[...new Set(r.ev.filter(e=>!e.muted).map(e=>`c${e.x}_${e.y}`))]},wrong1);
  const chk=()=>p.evaluate(ids=>{const all=[...document.querySelectorAll('.tile')];const withPb=all.filter(t=>t.querySelector('.pb')).map(t=>t.id).sort();
-   const hOK=all.filter(t=>t.querySelector('.pb')).every(t=>{const [x,y]=t.id.slice(1).split('_').map(Number);return Math.abs(parseFloat(t.querySelector('.pb').style.height)-PH(grid[y][x].p)*.42)<.1});
+   const hOK=all.filter(t=>t.querySelector('.pb')).every(t=>{const [x,y]=t.id.slice(1).split('_').map(Number);const b=t.querySelector('.pb').getBoundingClientRect(),T=t.getBoundingClientRect();return Math.abs(b.height/T.height*100-PH(grid[y][x].p)*.8)<1.5&&b.width>=T.width*.18});
    return JSON.stringify(withPb)===JSON.stringify(ids.slice().sort())&&hOK},revealedIds);
  ok(await chk(),`after the failed chain exactly the ${revealedIds.length} tiles that rang show their pitch bar (height = pitch)`);
- await p.click('#restart');ok(await chk(),'revealed pitch bars persist after Restart');
- await p.evaluate(()=>render());ok(await chk(),'revealed pitch bars persist across re-render');
- await go(1);await go(0);ok(await p.evaluate(()=>document.querySelectorAll('.pb').length===0),'reveals reset on level change');
+ await p.evaluate(()=>render());ok(await chk(),'pitch bars of the attempt survive a re-render (resize)');
+ const nb=()=>p.evaluate(()=>document.querySelectorAll('.pb').length);
+ await p.click('#restart');ok(await nb()===0,'Restart clears the pitch bars');
+ await p.click(`#c${wrong1.x}_${wrong1.y}`);await p.waitForFunction(()=>!busy,null,{timeout:8000});
+ const other=await p.evaluate(()=>{const ids=[...document.querySelectorAll('.tile')].map(t=>t.id);return ids.find(id=>!document.querySelector('#'+id+' .pb'))});
+ await p.click('#'+other);await p.waitForTimeout(60);ok(await p.evaluate(id=>{const pb=[...document.querySelectorAll('.pb')].map(e=>e.parentNode);return pb.length>=1&&pb.some(e=>e.id===id)&&pb.every(e=>e.classList.contains('rung'))},other),'next attempt clears the previous attempt\'s bars (only tiles rung in this attempt show one)');
+ await p.waitForFunction(()=>!busy,null,{timeout:8000});
+ await go(6);{const s=(await find('decoy'))[0]||(await find('silent'))[0];await p.click(`#c${s.x}_${s.y}`);await p.waitForFunction(()=>!busy,null,{timeout:8000});
+  ok(await nb()>0,'L7: bars shown after an attempt');await p.click('.tile.rotable .rot');ok(await nb()===0,'rotating a dial clears the bars');await p.click('#restart')}
+ await go(0);await p.click(`#c${wrong1.x}_${wrong1.y}`);await p.waitForTimeout(300);await go(1);ok(await nb()===0,'bars reset on level change');
+ // stale strip highlight: Listen interrupted by a tap, by Restart, and after normal end
+ {const hl=()=>p.evaluate(()=>document.querySelectorAll('#strip .col.hl').length);await go(2);
+  await p.click('#listen');await p.waitForTimeout(400);await p.click('#c0_0');await p.waitForTimeout(1300);ok(await hl()===0,'Listen interrupted by a tap leaves no highlighted column');
+  await p.waitForFunction(()=>!busy,null,{timeout:8000});await p.click('#listen');await p.waitForTimeout(400);await p.click('#restart');await p.waitForTimeout(600+await p.evaluate(()=>LEVELS[li].melody.length*180));
+  ok(await hl()===0,'Listen interrupted by Restart leaves no highlighted column (after the auto-Listen too)');
+  await p.click('#listen');await p.waitForTimeout(250+await p.evaluate(()=>LEVELS[li].melody.length*180));ok(await hl()===0,'no highlighted column after Listen ends')}
+ // no click lockout: tap right after Restart, rapid rotates, click right after a rotate
+ {await go(0);await p.click('#restart');const s=(await find('win'))[0];const bx=await (await p.$(`#c${s.x}_${s.y}`)).boundingBox();await p.mouse.click(bx.x+bx.width/2,bx.y+bx.height/2);
+  ok(await p.evaluate(()=>busy),'tile click immediately after Restart registers');await p.click('#restart');
+  await go(6);const T0=await toks();const rid=await (await p.$('.tile.rotable')).getAttribute('id');const rb=await (await p.$(`#${rid} .rot`)).boundingBox();
+  for(let i=0;i<4;i++)await p.mouse.click(rb.x+rb.width/2,rb.y+rb.height/2,{delay:5});
+  ok(await toks()===T0&&await p.evaluate(()=>history.length===4),'4 rapid badge clicks = 4 rotations (back to start)');
+  const db=await (await p.$('#'+rid)).boundingBox();await p.mouse.dblclick(db.x+db.width*.35,db.y+db.height*.6);ok(await p.evaluate(()=>history.length===6),'double-click on dial body = 2 rotations');
+  const s7=(await find('win'))[0];const bb7=await (await p.$(`#c${s7.x}_${s7.y}`)).boundingBox();
+  for(let i=0;i<s7.P.length;i++)for(let k=0;k<s7.ks[i];k++){const r=await (await p.$(`#c${s7.P[i][0]}_${s7.P[i][1]} .rot`)).boundingBox();await p.mouse.click(r.x+r.width/2,r.y+r.height/2,{delay:5})}
+  await p.mouse.click(bb7.x+bb7.width/2,bb7.y+bb7.height/2);ok(await p.evaluate(()=>busy),'tap right after rapid rotates registers');
+  await p.waitForSelector('#win',{state:'visible',timeout:10000});ok(true,'L7 solved via rapid rotates + immediate tap');await p.evaluate(()=>{document.getElementById('win').style.display='none'});await p.click('#restart')}
  // pointer: real mouse clicks at each tile's bounding-box centre hit that tile on every level
  for(let i=0;i<10;i++){await go(i);const miss=await p.evaluate(()=>[...document.querySelectorAll('.tile')].filter(t=>{const r=t.getBoundingClientRect();const e=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);return !e||e.closest('.tile')!==t}).map(t=>t.id));
   ok(miss.length===0,`L${i+1}: elementFromPoint at every tile centre is that tile ${miss.join(',')}`)}
