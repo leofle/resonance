@@ -11,7 +11,7 @@ function audit(level){const g0=E.parse(level);const pos=[];g0.forEach((r,y)=>r.f
 function scramble(level){const {pos,wins}=audit(level);if(wins.length!==1)return null;const w=wins[0];
  // current dial dirs at load; solution dirs = rotate load by w.ks
  const load=pos.map(([x,y])=>E.parse(level)[y][x].t[1]);const goal=pos.map((_,i)=>rotDir(load[i],w.ks[i]));
- for(let try_=0;try_<2000;try_++){const ks=pos.map(()=>Math.floor(Math.random()*4));if(pos.length&&!ks.some(k=>k))continue; // at least one wrong
+ for(let try_=0;try_<2000;try_++){const ks=pos.map(()=>Math.floor(Math.random()*4));if(pos.length&&ks.filter(k=>k).length<Math.min(pos.length,+(process.env.MINWRONG||1)))continue; // at least one wrong
   const rows=level.rows.map((row,y)=>row.split(/\s+/).map((tok,x)=>{if(tok==='.')return'.';const[body,p]=tok.split(':');if(body[0]!=='R')return tok;
    const i=pos.findIndex(([a,b])=>a===x&&b===y);return'R'+rotDir(goal[i],ks[i])+':'+p}).join(' '));
   const cand={...level,rows};const a=audit(cand);if(a.wins.length!==1)continue;

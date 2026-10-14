@@ -16,6 +16,10 @@ const SPECS={
  delay:{n:[11,13],S:[1,4],M:[0,1],D:1,R:1,minDec:3,chords:1,lb:['D']},
  chorus:{n:[12,15],S:[2,5],M:1,D:1,R:1,minDec:3,chords:1,lb:['D']},
  tuning:{n:[12,15],S:[2,5],M:[0,1],D:0,R:3,minDec:3,chords:1,lb:[]},
+ dial2:{n:[9,11],S:0,M:0,D:0,R:2,minDec:4,chords:0,lb:[]},
+ chorus4:{n:[13,16],S:[2,5],M:1,D:1,R:3,minDec:5,chords:1,lb:[]},
+ tuning4:{n:[13,16],S:[2,5],M:[0,1],D:0,R:4,minDec:5,chords:1,lb:[]},
+ finale4:{n:[14,17],S:[2,5],M:1,D:1,R:[3,4],minDec:5,chords:1,lb:[]},
  finale:{n:[13,16],S:[2,5],M:1,D:1,R:2,minDec:3,chords:1,lb:['D']},
 };
 const sp=SPECS[process.argv[2]],T=(+process.argv[3]||240)*1000;

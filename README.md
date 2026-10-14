@@ -44,3 +44,12 @@ node tools/stress_audio.js    # limiter keeps dense chains below 1.0
 node tools/test_layout.js     # Chrome + WebKit at 320/375/390/430/1280: strip edges = board edges, no horizontal overflow, Listen in controls row, strip follows playback, drag scroll
 node tools/test_sound.js      # audio unlock in Chrome + WebKit (desktop and iPhone-size touch); needs `npx playwright-core install webkit`
 ```
+
+## v2.9 (playtest: counting notes)
+- The strip shows **one bar per beat**: the top note of that beat's chord. It never shows how many notes sound on a beat (Listen and tapping the strip still play the full chords). The failed-Play summary only says "N of M beats right · K silent".
+- Pitch bars and beat numbers show only on the tile that is ringing; nothing stays after a Play, a win or a preview.
+- Dials load at random fixed orientations (some can already be right, at least one is wrong). The start is never the only tile nothing points at.
+- Harder levels: L3 has 2 dials (12 full-ring decoys); L8–10 have 3–4 dials (3–4 turned in the solution) and 5–12 full-ring decoys.
+- Progress is stored under `res28*` (old progress is ignored).
+- `tools/naive.js` reports, per level, decoys whose top-note sequence matches the strip, and how many remain after one failed Play.
+- Tools: `gen10.js` (specs dial2/chorus4/tuning4/finale4), `gen11.js` (90°-symmetric, all-same-shape decoys), `scramble_dials.js` (MINWRONG=n), `repitch.js` (TOP=n, NOLB=1), `check_levels.js`.

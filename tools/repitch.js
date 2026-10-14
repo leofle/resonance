@@ -20,6 +20,7 @@ while(Date.now()-t0<T){const tg=rnd(cov);if(tg.ks.every(k=>k===0)&&tg.ks.length)
  const cost=()=>{const Tm=mel(tg.beats,P);let c=0;const ms=others.map(d=>mel(d.beats,P));c+=25*ms.filter(m=>eqM(m,Tm)).length;
   const m3=ms.filter(m=>eqM(m.slice(0,3),Tm.slice(0,3))).length;c+=10*Math.max(0,2-m3);const fp=P[tg.y][tg.x];let sh=0;
   cells.forEach(([x,y])=>{if(tok[y][x][0]!=='R'&&!(x===tg.x&&y===tg.y)&&P[y][x]===fp)sh++});c+=6*Math.max(0,3-sh);c+=5*Tm.filter(ch=>new Set(ch).size!==ch.length).length;
+  if(process.env.TOP){const tp=m=>m.map(c=>c.length?Math.max(...c):-1).join(',');const tt=tp(Tm);c+=8*Math.max(0,+process.env.TOP-ms.filter(m=>!eqM(m,Tm)&&tp(m)===tt).length)}
   for(const a of alts){const w=a.c.filter(d=>eqM(mel(d.beats,P),Tm)).length;if(a.k==='M'&&w<2)c+=12;if(a.k==='D'&&w>0)c+=12*w}return{c,m3,sh,Tm}};
  let cur=cost();for(let it=0;it<8000&&cur.c>0;it++){const[x,y]=rnd(cells);const o=P[y][x];P[y][x]=Math.floor(Math.random()*NP);const nc=cost();if(nc.c<=cur.c||Math.random()<.02)cur=nc;else P[y][x]=o}
  if(!globalThis.BEST||cur.c<globalThis.BEST.c){const ms=others.map(d=>mel(d.beats,P));globalThis.BEST={c:cur.c,m3:cur.m3,sh:cur.sh,dupes:ms.filter(m=>eqM(m,cur.Tm)).length,alts:alts.map(a=>a.k+':'+a.c.filter(d=>eqM(mel(d.beats,P),cur.Tm)).length+'/'+a.c.length),nOthers:others.length}}

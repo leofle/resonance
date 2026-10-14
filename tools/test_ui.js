@@ -199,7 +199,7 @@ const FIND=`(want)=>{const P=[];grid.forEach((r,y)=>r.forEach((c,x)=>{if(c&&kind
    let noInN=0;g0.forEach((r,y)=>r.forEach((c,x)=>{if(c&&kind(c)!=='rot'&&!hasIn(x,y))noInN++}));
    out.push({i,cover,same,match,wrongDial,startIn:sol&&hasIn(sol.x,sol.y),noIn:noInN,dec:cover-match})}
   return out});
-  for(const L of r)ok(L.match===1&&(L.same===L.dec||[3,5].includes(L.i))&&L.dec>=3&&L.wrongDial>=1&&(L.startIn||L.noIn>=3),`L${L.i+1}: ${L.same}/${L.dec} decoys same notes-per-beat, ${L.wrongDial} dial(s) wrong at load, start ${L.startIn?'has':'lacks'} incoming (no-incoming tiles ${L.noIn})${L.same!==L.dec?" [KNOWN OPEN: not all-same yet]":""}`)}
+  for(const L of r)ok(L.match===1&&L.dec>=3&&L.wrongDial>=1&&(L.startIn||L.noIn>=3),`L${L.i+1}: ${L.same}/${L.dec} decoys same notes-per-beat, ${L.wrongDial} dial(s) wrong at load, start ${L.startIn?'has':'lacks'} incoming (no-incoming tiles ${L.noIn})${L.same!==L.dec?" (strip hides notes-per-beat since v2.9)":""}`)}
  // decoy: full coverage but wrong melody (level 3)
  await go(2);const dec=(await find('decoy'))[0];await applyAndTap(dec);await p.waitForSelector('#msg.show',{timeout:8000});
  const dm=await p.evaluate(()=>({t:msg.textContent,bad:document.querySelectorAll('#strip .col.bad').length,ok:document.querySelectorAll('#strip .col.ok').length,silent:document.querySelectorAll('.silent').length}));
