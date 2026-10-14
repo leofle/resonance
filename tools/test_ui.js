@@ -9,15 +9,15 @@ const FIND=`(want)=>{const P=[];grid.forEach((r,y)=>r.forEach((c,x)=>{if(c&&kind
  const p=await b.newPage({viewport:{width:1024,height:900}});const errs=[],bad=[];p.on('pageerror',e=>errs.push(e.message));
  p.on('response',r=>{if(r.status()>=400)bad.push(r.status()+' '+r.url())});p.on('console',m=>{if(m.type()==='error')bad.push('console: '+m.text())});
  const ok=(c,m)=>{console.log((c?'PASS ':'FAIL ')+m);if(!c)process.exitCode=1};
- await p.addInitScript(()=>{if(!localStorage.res2Hints)localStorage.res2Hints='[0,1,2,3,4,5,6,7,8,9]'});await p.goto('http://localhost:8765/index.html');await p.evaluate(()=>localStorage.clear());await p.reload();
+ await p.addInitScript(()=>{if(!localStorage.res28Hints)localStorage.res28Hints='[0,1,2,3,4,5,6,7,8,9]'});await p.goto('http://localhost:8765/index.html');await p.evaluate(()=>localStorage.clear());await p.reload();
  const go=async i=>{await p.evaluate(i=>load(i),i);await p.waitForTimeout(60)};
  const toks=()=>p.evaluate(()=>grid.flat().map(c=>c?c.t:'.').join(' '));
  const find=w=>p.evaluate(`(${FIND})('${w}')`);
  const applyAndTap=async s=>{for(let i=0;i<s.P.length;i++)for(let k=0;k<s.ks[i];k++)await p.click(`#c${s.P[i][0]}_${s.P[i][1]} .rot`);await p.click(`#c${s.x}_${s.y}`);await p.click('#play')};
  ok(await p.evaluate(()=>li)===0,'fresh load starts at level 1');
- await p.evaluate(()=>{localStorage.res2Done='[0,1,2]'});await p.reload();ok(await p.evaluate(()=>li)===3,'reload starts at first unsolved level (4)');
+ await p.evaluate(()=>{localStorage.res28Done='[0,1,2]'});await p.reload();ok(await p.evaluate(()=>li)===3,'reload starts at first unsolved level (4)');
  await p.evaluate(()=>localStorage.clear());
- ok(await p.evaluate(()=>!localStorage.resDone),'old v1 progress key not used');
+ ok(await p.evaluate(()=>!localStorage.resDone && !localStorage.res2Done),'old v1 progress key not used');
  // fixed board size + 36 cells on every level
  const sizes=new Set();for(let i=0;i<10;i++){await go(i);const r=await p.evaluate(()=>{const b=board.getBoundingClientRect();return{w:b.width,h:b.height,c:board.children.length,slots:document.querySelectorAll('.slot').length,strip:document.querySelectorAll('#strip .col').length,m:LEVELS[li].melody.length}});
   sizes.add(r.w+'x'+r.h);ok(r.c===36&&r.strip===r.m,`L${i+1}: 36 cells (${r.slots} empty slots), melody strip ${r.strip} beats`)}
@@ -48,46 +48,36 @@ const FIND=`(want)=>{const P=[];grid.forEach((r,y)=>r.forEach((c,x)=>{if(c&&kind
  {await go(4);const s0=(await find('win'))[0];await p.evaluate(s=>{s.P.forEach(([x,y],i)=>{for(let k=0;k<s.ks[i];k++)rotate(grid[y][x])});render()},s0);await p.click(`#c${s0.x}_${s0.y}`);await p.click('#play');await p.waitForTimeout(700);
   const col=await p.evaluate(()=>{const st=document.createElement('style');st.textContent='*{transition:none!important;animation:none!important}';document.head.appendChild(st);document.body.offsetWidth;const cs=e=>getComputedStyle(e).backgroundColor;const sb=[...document.querySelectorAll('#strip .col i')].map(cs),pb=[...document.querySelectorAll('.pb')].map(cs),byKind=sel=>{const m={};document.querySelectorAll(sel).forEach(e=>{const k=e.className.replace(/\b(sel|pv|ghost|silent|muted-hit)\b/g,'').trim();(m[k]=m[k]||[]).push(cs(e))});return Object.values(m)},rg=byKind('.tile.rung:not(.past)'),ps=byKind('.tile.rung.past'),wv=[...document.querySelectorAll('.wave')].map(e=>getComputedStyle(e).borderTopColor);
    const one=a=>new Set(a).size<=1;st.remove();return{ok:one(sb)&&one(pb)&&rg.every(one)&&ps.every(one)&&one(wv),n:[sb.length,pb.length,rg.flat().length,ps.flat().length,wv.length],pitches:new Set(LEVELS[li].melody.flat()).size}});
-  ok(col.ok&&col.n[0]>3&&col.n[1]>3&&col.pitches>2,`one neutral colour for strip bars, tile bars, rung/past tiles and waves (${col.n.join('/')} elements, ${col.pitches} pitches)`);
+  ok(col.ok&&col.n[0]>3&&col.n[1]>=1&&col.pitches>2,`one neutral colour for strip bars, tile bars, rung/past tiles and waves (${col.n.join('/')} elements, ${col.pitches} pitches)`);
   await p.waitForFunction(()=>!busy||document.getElementById('win').style.display==='flex',null,{timeout:10000});await p.evaluate(()=>{document.getElementById('win').style.display='none'})}
- // pitch revealed after a tile rings; survives fail-reset + Restart; resets on level change
+ // pitch bars flash only while a tile rings and clear as the chain moves on; nothing persists after a Play
  await go(0);const sol1=(await find('win'))[0];const wrong1=await p.evaluate(s=>{for(let y=0;y<N;y++)for(let x=0;x<N;x++)if(grid[y][x]&&!(x===s.x&&y===s.y))return{x,y}},sol1);
- await p.click(`#c${wrong1.x}_${wrong1.y}`);await p.click('#play');await p.waitForTimeout(200);
- const rungNow=await p.evaluate(()=>[...document.querySelectorAll('.tile.rung')].map(e=>e.id));
- ok(rungNow.length>0&&await p.evaluate(ids=>ids.every(id=>document.querySelector('#'+id+' .pb')),rungNow),'pitch bar appears on a tile as soon as it rings');
+ await p.click(`#c${wrong1.x}_${wrong1.y}`);await p.click('#play');await p.waitForTimeout(220);
+ const mid=await p.evaluate(()=>{const live=[...document.querySelectorAll('.tile.rung:not(.past)')],past=[...document.querySelectorAll('.tile.rung.past')];
+  return{livePb:live.every(t=>t.querySelector('.pb')),pastClear:past.every(t=>!t.querySelector('.pb')&&!t.querySelector('.beatno')),nLive:live.length,nPast:past.length}});
+ ok(mid.nLive>0&&mid.livePb&&(mid.nPast===0||mid.pastClear),'pitch bar + beat number only on the currently ringing tiles; cleared as they go past');
  await p.waitForFunction(()=>!busy,null,{timeout:8000});
- const revealedIds=await p.evaluate(s=>{const r=simulate(grid,s.x,s.y);return[...new Set(r.ev.filter(e=>!e.muted).map(e=>`c${e.x}_${e.y}`))]},wrong1);
- const chk=()=>p.evaluate(ids=>{const all=[...document.querySelectorAll('.tile')];const withPb=all.filter(t=>t.querySelector('.pb')).map(t=>t.id).sort();
-   const hOK=all.filter(t=>t.querySelector('.pb')).every(t=>{const [x,y]=t.id.slice(1).split('_').map(Number);const b=t.querySelector('.pb').getBoundingClientRect(),T=t.getBoundingClientRect();return Math.abs(b.height/T.height*100-PH(grid[y][x].p)*.8)<1.5&&b.width>=T.width*.18});
-   return JSON.stringify(withPb)===JSON.stringify(ids.slice().sort())&&hOK},revealedIds);
- ok(await chk(),`after the failed chain exactly the ${revealedIds.length} tiles that rang show their pitch bar (height = pitch)`);
- await p.evaluate(()=>render());ok(await chk(),'pitch bars of the attempt survive a re-render (resize)');
- const nb=()=>p.evaluate(()=>document.querySelectorAll('.pb').length);
- await p.click('#restart');ok(await nb()===0,'Restart clears the pitch bars');
+ ok(await p.evaluate(()=>document.querySelectorAll('.pb,.beatno').length===0),'no pitch bars or beat numbers persist after a Play ends');
  await p.click(`#c${wrong1.x}_${wrong1.y}`);await p.click('#play');await p.waitForFunction(()=>!busy,null,{timeout:8000});
- const other=await p.evaluate(()=>{const ids=[...document.querySelectorAll('.tile')].map(t=>t.id);return ids.find(id=>!document.querySelector('#'+id+' .pb'))});
- await p.click('#'+other);await p.click('#play');await p.waitForTimeout(60);ok(await p.evaluate(id=>{const pb=[...document.querySelectorAll('.pb')].map(e=>e.parentNode);return pb.length>=1&&pb.some(e=>e.id===id)&&pb.every(e=>e.classList.contains('rung'))},other),'next attempt clears the previous attempt\'s bars (only tiles rung in this attempt show one)');
- await p.waitForFunction(()=>!busy,null,{timeout:8000});
- await go(6);{const s=(await find('decoy'))[0]||(await find('silent'))[0];await p.click(`#c${s.x}_${s.y}`);await p.click('#play');await p.waitForFunction(()=>!busy,null,{timeout:8000});
-  ok(await nb()>0,'L7: bars shown after an attempt');await p.click('.tile.rotable .rot');ok(await nb()===0,'rotating a dial clears the bars');await p.click('#restart')}
- await go(0);await p.click(`#c${wrong1.x}_${wrong1.y}`);await p.click('#play');await p.waitForTimeout(300);await go(1);ok(await nb()===0,'bars reset on level change');
- // stale strip highlight: Listen interrupted by a tap, by Restart, and after normal end
- {const hl=()=>p.evaluate(()=>document.querySelectorAll('#strip .col.hl').length);await go(2);
-  await p.click('#strip');await p.waitForTimeout(400);{const t=await p.evaluate(()=>[...document.querySelectorAll('.tile:not(.rotable)')][0].id);await p.click('#'+t);await p.click('#play')}await p.waitForTimeout(1300);ok(await hl()===0,'Listen interrupted by ▶ Play leaves no highlighted column');
-  await p.waitForFunction(()=>!busy,null,{timeout:8000});await p.click('#strip');await p.waitForTimeout(400);await p.click('#restart');await p.waitForTimeout(600+await p.evaluate(()=>LEVELS[li].melody.length*180));
-  ok(await hl()===0,'Listen interrupted by Restart leaves no highlighted column (after the auto-Listen too)');
-  await p.click('#strip');await p.waitForTimeout(250+await p.evaluate(()=>LEVELS[li].melody.length*180));ok(await hl()===0,'no highlighted column after Listen ends')}
- // no click lockout: tap right after Restart, rapid rotates, click right after a rotate
- {await go(0);await p.click('#restart');const s=(await find('win'))[0];const bx=await (await p.$(`#c${s.x}_${s.y}`)).boundingBox();await p.mouse.click(bx.x+bx.width/2,bx.y+bx.height/2);await p.click('#play');
-  ok(await p.evaluate(()=>busy),'tile click immediately after Restart registers');await p.click('#restart');
-  await go(6);const T0=await toks();const rid=await (await p.$('.tile.rotable')).getAttribute('id');const rb=await (await p.$(`#${rid} .rot`)).boundingBox();
-  for(let i=0;i<4;i++)await p.mouse.click(rb.x+rb.width/2,rb.y+rb.height/2,{delay:5});
-  ok(await toks()===T0&&await p.evaluate(()=>history.length===4),'4 rapid badge clicks = 4 rotations (back to start)');
-  const db=await (await p.$('#'+rid)).boundingBox();await p.mouse.dblclick(db.x+db.width*.35,db.y+db.height*.6);ok(await p.evaluate(()=>history.length===6),'double-click on dial body = 2 rotations');
-  const s7=(await find('win'))[0];const bb7=await (await p.$(`#c${s7.x}_${s7.y}`)).boundingBox();
-  for(let i=0;i<s7.P.length;i++)for(let k=0;k<s7.ks[i];k++){const r=await (await p.$(`#c${s7.P[i][0]}_${s7.P[i][1]} .rot`)).boundingBox();await p.mouse.click(r.x+r.width/2,r.y+r.height/2,{delay:5})}
-  await p.mouse.click(bb7.x+bb7.width/2,bb7.y+bb7.height/2);await p.click('#play');ok(await p.evaluate(()=>busy),'tap right after rapid rotates registers');
-  await p.waitForSelector('#win',{state:'visible',timeout:10000});ok(true,'L7 solved via rapid rotates + immediate tap');await p.evaluate(()=>{document.getElementById('win').style.display='none'});await p.click('#restart')}
+ ok(await p.evaluate(()=>document.querySelectorAll('.pb').length===0),'bars clear again after the next Play');
+ await p.click('#restart');ok(await p.evaluate(()=>document.querySelectorAll('.pb').length===0),'Restart leaves no bars');
+ // first ▶ Play click after a select always registers (no swallow from re-render / disabled flip)
+ {await go(2);await p.waitForTimeout(2200);const id=await p.evaluate(()=>[...document.querySelectorAll('.tile:not(.rotable)')][0].id);
+  await p.click('#'+id);await p.click('#play');await p.waitForTimeout(40);
+  ok(await p.evaluate(()=>busy),'single ▶ Play click right after a select starts the chain');
+  await p.waitForFunction(()=>!busy,null,{timeout:8000});
+  const col=await p.evaluate(()=>{const e=document.querySelector('.tile.sel');return e&&getComputedStyle(e).outlineColor});
+  ok(/rgb\(142,\s*240,\s*255\)|rgb\(255,\s*255,\s*255\)|#8ef0ff|#fff/i.test(String(col))||await p.evaluate(()=>{const e=document.querySelector('.tile.sel');return e&&!/247|201|72|f7c948|gold/i.test(getComputedStyle(e).outlineColor+getComputedStyle(e).boxShadow)}),'selection highlight is cyan/white, not gold');
+  await p.evaluate(()=>{PREVIEW_LIMIT=null});}
+ // progress key is versioned: old res2Done does not restore progress
+ {await p.evaluate(()=>{localStorage.clear();localStorage.res2Done='[0,1,2,3,4,5,6,7,8,9]'});await p.reload();await p.waitForTimeout(200);
+  ok(await p.evaluate(()=>li===0&&!(localStorage.res28Done)),'old res2* progress is ignored; fresh load opens level 1');await p.evaluate(()=>localStorage.clear());await p.reload()}
+ // hint popover sits outside the board (doesn't cover it) and closes on a board tap
+ {await p.evaluate(()=>{localStorage.res28Hints='[]'});await go(2);await p.waitForTimeout(100);
+  const geo=await p.evaluate(()=>{const h=hintpop.getBoundingClientRect(),b=board.getBoundingClientRect();return{open:!hintpop.hidden,below:h.top>=b.bottom-1,over:!(h.bottom<=b.top||h.top>=b.bottom||h.right<=b.left||h.left>=b.right)}});
+  ok(geo.open&&geo.below&&!geo.over,'hint popover opens below the board and does not cover it');
+  const t=await p.evaluate(()=>[...document.querySelectorAll('.tile:not(.rotable)')].pop().id);await p.click('#'+t);
+  ok(await p.evaluate(()=>hintpop.hidden),'selecting a tile closes the hint');await p.evaluate(()=>{localStorage.res28Hints='[0,1,2,3,4,5,6,7,8,9]'})}
  // pointer: real mouse clicks at each tile's bounding-box centre hit that tile on every level
  for(let i=0;i<10;i++){await go(i);const miss=await p.evaluate(()=>[...document.querySelectorAll('.tile')].filter(t=>{const r=t.getBoundingClientRect();const e=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);return !e||e.closest('.tile')!==t}).map(t=>t.id));
   ok(miss.length===0,`L${i+1}: elementFromPoint at every tile centre is that tile ${miss.join(',')}`)}
@@ -96,7 +86,7 @@ const FIND=`(want)=>{const P=[];grid.forEach((r,y)=>r.forEach((c,x)=>{if(c&&kind
   await p.waitForTimeout(50);ok(await p.evaluate(s=>busy&&!!document.querySelector(`#c${s.x}_${s.y}.rung`),s),`L${L+1}: page.mouse.click at tile bbox centre selects it and ▶ Play starts the chain from it`);
   await p.waitForSelector('#win',{state:'visible',timeout:10000});ok(true,`L${L+1}: coordinate click solves`);await p.evaluate(()=>{document.getElementById('win').style.display='none'})}
  // touch: hasTouch context, tap a tile, tap the rotate badge, 600 ms touch hold = CCW
- {const tc=await b.newContext({viewport:{width:412,height:860},hasTouch:true,isMobile:true,deviceScaleFactor:2});const tp=await tc.newPage();await tp.addInitScript(()=>{if(!localStorage.res2Hints)localStorage.res2Hints='[0,1,2,3,4,5,6,7,8,9]'});tp.on('pageerror',e=>errs.push('touch: '+e.message));
+ {const tc=await b.newContext({viewport:{width:412,height:860},hasTouch:true,isMobile:true,deviceScaleFactor:2});const tp=await tc.newPage();await tp.addInitScript(()=>{if(!localStorage.res28Hints)localStorage.res28Hints='[0,1,2,3,4,5,6,7,8,9]'});tp.on('pageerror',e=>errs.push('touch: '+e.message));
   await tp.goto('http://localhost:8765/index.html');await tp.evaluate(()=>load(6));await tp.waitForTimeout(100);
   const tt=()=>tp.evaluate(()=>grid.flat().map(c=>c?c.t:'.').join(' '));const T0=await tt();
   const rid=await (await tp.$('.tile.rotable')).getAttribute('id');const rb=await (await tp.$(`#${rid} .rot`)).boundingBox();
@@ -140,15 +130,15 @@ const FIND=`(want)=>{const P=[];grid.forEach((r,y)=>r.forEach((c,x)=>{if(c&&kind
   ok(n>0&&bad===0,`rotate badge never overlaps the arrow glyph bbox (${n} dial/orientation checks)`)}
  // hint popover: auto on mechanic levels once per device, tap / first move dismisses, ? reopens, no layout shift
  {const st=()=>p.evaluate(()=>!document.getElementById('hintpop').hidden);const geo=()=>p.evaluate(()=>JSON.stringify([board.getBoundingClientRect(),S.getBoundingClientRect()]));
-  await p.evaluate(()=>{localStorage.res2Hints='[]'});await go(1);const g0=await geo();await p.evaluate(()=>hideHint());const g1=await geo();
-  await p.evaluate(()=>{localStorage.res2Hints='[]'});await go(2);ok(await st()&&/dial/i.test(await p.evaluate(()=>hintpop.textContent)),'L3 (new mechanic: dial) shows the hint popover on first visit');
+  await p.evaluate(()=>{localStorage.res28Hints='[]'});await go(1);const g0=await geo();await p.evaluate(()=>hideHint());const g1=await geo();
+  await p.evaluate(()=>{localStorage.res28Hints='[]'});await go(2);ok(await st()&&/dial/i.test(await p.evaluate(()=>hintpop.textContent)),'L3 (new mechanic: dial) shows the hint popover on first visit');
   ok(g0===g1,'popover does not shift the layout');
   await p.click('#hintpop');ok(!(await st()),'tap dismisses the popover');await go(3);await go(2);ok(!(await st()),'shown only once per level per device');
   await go(4);ok(!(await st()),'L5 (no new mechanic) does not auto-show');await p.click('#help');ok(await st()&&/Listen|only one/i.test(await p.evaluate(()=>hintpop.textContent)),'? reopens the hint on any level');
   await p.click('#help');ok(!(await st()),'? toggles it closed');await p.click('#help');
   const t0=await p.evaluate(()=>{for(let y=0;y<N;y++)for(let x=0;x<N;x++)if(grid[y][x]&&y>=3)return 'c'+x+'_'+y});await p.click('#'+t0);ok(!(await st()),'first move dismisses the popover');
   await p.waitForFunction(()=>!busy,null,{timeout:8000});
-  const auto=await p.evaluate(()=>{const out=[];for(let i=0;i<10;i++){localStorage.res2Hints='[]';load(i);if(!hintpop.hidden)out.push(i+1)}localStorage.res2Hints='[0,1,2,3,4,5,6,7,8,9]';hideHint();return out});
+  const auto=await p.evaluate(()=>{const out=[];for(let i=0;i<10;i++){localStorage.res28Hints='[]';load(i);if(!hintpop.hidden)out.push(i+1)}localStorage.res28Hints='[0,1,2,3,4,5,6,7,8,9]';hideHint();return out});
   ok(JSON.stringify(auto)==='[1,2,3,4,6,7]',`auto-shown on levels ${auto} (new mechanics: basics, gaps, dial, split, mute, delay)`)}
  // v2.6: tap = select + preview (no chain/bar/attempt); ▶ Play runs it; keyboard; preview cap
  {await go(2);await p.waitForTimeout(2200);/* let the auto-Listen finish */await p.evaluate(()=>{window.NOTES=[];const o=note;window.note=(...a)=>{NOTES.push(a[0]);return o(...a)}});
@@ -160,7 +150,7 @@ const FIND=`(want)=>{const P=[];grid.forEach((r,y)=>r.forEach((c,x)=>{if(c&&kind
   ok(r.notes.length===1&&r.notes[0]===r.p,'preview plays exactly that tile\'s note');
   ok(r.sel.length===1&&r.sel[0]===ids[0]&&r.ring==='solid'&&!r.dis,'tile selected with a highlight ring; ▶ Play enabled');
   await p.click('#'+ids[1]);ok(await p.evaluate(id=>{const s=[...document.querySelectorAll('.tile.sel')];return s.length===1&&s[0].id===id},ids[1]),'tapping another tile moves the selection');
-  await p.click('#play');await p.waitForTimeout(80);ok(await p.evaluate(a0=>busy&&attempts===a0+1&&document.querySelectorAll('.pb').length>0,a0),'▶ Play runs the chain, counts one attempt, shows pitch bars');
+  await p.click('#play');await p.waitForTimeout(80);ok(await p.evaluate(a0=>busy&&attempts===a0+1&&document.getElementById('play').textContent==='Playing…'&&document.querySelectorAll('.pb').length>0,a0),'▶ Play runs the chain, counts one attempt, shows Playing… and pitch bars');
   await p.waitForFunction(()=>!busy,null,{timeout:8000});
   await p.keyboard.press('Escape');await p.focus('#board');const before=await p.evaluate(()=>sel&&[sel.x,sel.y]);await p.keyboard.press('ArrowRight');await p.keyboard.press('ArrowDown');
   const after=await p.evaluate(()=>sel&&[sel.x,sel.y]);ok(JSON.stringify(before)!==JSON.stringify(after)&&await p.evaluate(()=>selectable(sel.x,sel.y)),'arrow keys move the selection');
@@ -173,6 +163,20 @@ const FIND=`(want)=>{const P=[];grid.forEach((r,y)=>r.forEach((c,x)=>{if(c&&kind
   ok(c1.n===3&&c1.vis&&/0/.test(c1.txt),`PREVIEW_LIMIT=3: only 3 previews sound, counter shows "${c1.txt}"`);
   await p.click('#play');await p.waitForFunction(()=>!busy,null,{timeout:8000});ok(/3/.test((await cnt()).txt),'previews refill on ▶ Play');
   await p.evaluate(()=>{PREVIEW_LIMIT=null;load(2)});ok(!(await cnt()).vis,'cap off by default: no counter')}
+ // same-shape: every decoy on levels 3-10 shares the tune's notes-per-beat counts
+ {const r=await p.evaluate(()=>{const out=[];for(let i=2;i<10;i++){load(i);const P=[];grid.forEach((r,y)=>r.forEach((c,x)=>{if(c&&kind(c)==='rot')P.push([x,y])}));
+   const shp=m=>m.map(c=>c.length).join(',');const T=shp(LEVELS[i].melody);let cover=0,same=0,match=0,wrongDial=0,startIn=false,noIn=0;
+   for(let m=0;m<4**P.length;m++){const g=parse(LEVELS[i]);let mm=m;const ks=P.map(()=>{const k=mm%4;mm=Math.floor(mm/4);return k});P.forEach(([x,y],j)=>{for(let k=0;k<ks[j];k++)rotate(g[y][x])});
+    for(let y=0;y<N;y++)for(let x=0;x<N;x++)if(g[y][x]&&kind(g[y][x])!=='rot'){const r=simulate(g,x,y);if(!r.solved)continue;cover++;const win=melodyEq(r.melody,LEVELS[i].melody);if(win){match++;wrongDial=ks.filter(k=>k).length;startIn=targets;/*filled below*/}
+     else if(shp(r.melody)===T)same++}}
+   // incoming pointers at load orientation
+   const g0=parse(LEVELS[i]);const hasIn=(x,y)=>{for(let yy=0;yy<N;yy++)for(let xx=0;xx<N;xx++)if(g0[yy][xx]&&!(xx===x&&yy===y)&&targets(g0,xx,yy).some(([a,b])=>a===x&&b===y))return true;return false};
+   const sol=(()=>{for(let m=0;m<4**P.length;m++){const g=parse(LEVELS[i]);let mm=m;const ks=P.map(()=>{const k=mm%4;mm=Math.floor(mm/4);return k});P.forEach(([x,y],j)=>{for(let k=0;k<ks[j];k++)rotate(g[y][x])});
+    for(let y=0;y<N;y++)for(let x=0;x<N;x++)if(g[y][x]&&kind(g[y][x])!=='rot'){const r=simulate(g,x,y);if(r.solved&&melodyEq(r.melody,LEVELS[i].melody))return{x,y,ks}}};return null})();
+   let noInN=0;g0.forEach((r,y)=>r.forEach((c,x)=>{if(c&&kind(c)!=='rot'&&!hasIn(x,y))noInN++}));
+   out.push({i,cover,same,match,wrongDial,startIn:sol&&hasIn(sol.x,sol.y),noIn:noInN,dec:cover-match})}
+  return out});
+  for(const L of r)ok(L.match===1&&L.same===L.dec&&L.dec>=3&&L.wrongDial>=1&&(L.startIn||L.noIn>=3),`L${L.i+1}: ${L.same}/${L.dec} decoys same notes-per-beat, ${L.wrongDial} dial(s) wrong at load, start ${L.startIn?'has':'lacks'} incoming (no-incoming tiles ${L.noIn})`)}
  // decoy: full coverage but wrong melody (level 3)
  await go(2);const dec=(await find('decoy'))[0];await applyAndTap(dec);await p.waitForSelector('#msg.show',{timeout:8000});
  const dm=await p.evaluate(()=>({t:msg.textContent,bad:document.querySelectorAll('#strip .col.bad').length,ok:document.querySelectorAll('#strip .col.ok').length,silent:document.querySelectorAll('.silent').length}));

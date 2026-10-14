@@ -9,7 +9,7 @@ header{margin-top:10px;text-align:center;position:relative;z-index:10}
 h1{margin:0;font-weight:300;letter-spacing:.4em;font-size:16px}
 #lvl{opacity:.6;font-size:11px;letter-spacing:.2em;margin-top:3px}
 #stage{position:relative}
-#hintpop{position:absolute;left:12px;right:12px;top:12px;z-index:6;padding:12px 14px 12px 14px;border-radius:14px;background:#1d1938f2;color:#f4f2ff;font-size:15px;line-height:1.35;box-shadow:0 8px 30px #000b,inset 0 0 0 1px #8ef0ff66;cursor:pointer;backdrop-filter:blur(4px)}
+#hintpop{margin:10px 0 0;padding:12px 14px;border-radius:14px;background:#1d1938f2;color:#f4f2ff;font-size:15px;line-height:1.35;box-shadow:0 8px 30px #000b,inset 0 0 0 1px #8ef0ff66;cursor:pointer}
 #hintpop[hidden]{display:none}
 #hintpop small{display:block;margin-top:6px;opacity:.6;font-size:12px}
 #board{display:grid;gap:var(--gap,10px);position:relative;overflow:hidden;padding:12px;border-radius:22px;contain:paint;clip-path:inset(0 round 22px);background:#ffffff06;box-shadow:inset 0 0 0 1px #ffffff14}
@@ -42,7 +42,7 @@ h1{margin:0;font-weight:300;letter-spacing:.4em;font-size:16px}
 @keyframes silent{from{box-shadow:inset 0 0 0 4px #ff3b5c,0 0 0 2px #fff}to{box-shadow:inset 0 0 0 4px #fff,0 0 0 2px #ff3b5c}}
 #msg{min-height:22px;margin:4px 0 4px;font-size:15px;font-weight:800;letter-spacing:.03em;color:#ffb199;text-shadow:0 0 8px #ff6a4d88,0 1px 2px #000;opacity:0;transition:opacity .2s}#msg.show{opacity:1}
 .tile.muted-hit{box-shadow:inset 0 0 0 4px #ff5a7a,0 0 0 2px #000}
-.tile.sel{outline:3px solid #fff;outline-offset:2px;box-shadow:0 0 0 6px #8ef0ff88,0 0 18px 4px #8ef0ffaa!important;z-index:2}
+.tile.sel{outline:3px solid #8ef0ff;outline-offset:2px;box-shadow:0 0 0 5px #8ef0ff55,0 0 16px 2px #8ef0ff99!important;z-index:2}
 .tile.pv{animation:pv .35s ease-out}@keyframes pv{40%{transform:scale(1.07)}}
 #play{background:#8ef0ff;color:#0d0b1a;border:0;font-weight:800}#play:disabled{background:#ffffff14;color:#e9e6ff66;cursor:not-allowed}
 #pvc{align-self:center;font-size:13px;opacity:.85}#pvc[hidden]{display:none}
@@ -86,7 +86,7 @@ button:hover{background:#ffffff22}
 <header><h1>RESONANCE</h1><div id="lvl"></div><nav id="dots" aria-label="Levels"></nav></header>
 <div id="msg" aria-live="polite" aria-hidden="true"></div>
 <div id="tune"><div id="strip" role="button" tabindex="0" aria-label="Target melody: tap to play it (L)" title="Tap to play the tune (L)"><span id="note" aria-hidden="true">♪</span><div id="track"></div></div></div>
-<div id="stage"><div id="board" tabindex="0" aria-label="Board: arrow keys select a tile, P or Enter plays"></div><div id="hintpop" role="status" aria-live="polite" hidden></div></div>
+<div id="stage"><div id="board" tabindex="0" aria-label="Board: arrow keys select a tile, P or Enter plays"></div></div><div id="hintpop" role="status" aria-live="polite" hidden></div>
 <button id="unlock" type="button">🔈 Tap to enable sound</button>
 <div id="bar"><button id="play" disabled>▶ Play</button><span id="pvc" hidden></span><button id="undo">↶ Undo</button><button id="restart">⟲ Restart</button><button id="sound">🔊</button><button id="help" aria-label="Show the hint" title="Hint">?</button></div>
 <div id="flash"></div>
@@ -186,8 +186,7 @@ const ARROW={'>':0,'v':90,'<':180,'^':270};
 function svgFor(c){const k=kind(c);const sw='stroke="#e9e6ff" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"';
  if(k==='split'){const r=c.t==='S|'?90:0;return `<svg viewBox="0 0 24 24" ${sw} style="transform:rotate(${r}deg)"><path d="M2 12h20M6 8l-4 4 4 4M18 8l4 4-4 4"/></svg>`}
  const d=c.t[c.t.length-1];return `<svg viewBox="0 0 24 24" ${sw} style="transform:rotate(${ARROW[d]}deg)"><path d="M4 12h15M13 6l6 6-6 6"/></svg>`}
-const KEY='res2';   // v2 levels: fresh progress key
-let shown=new Set();   // tiles that rang in the current attempt: they show a pitch bar until the next attempt, Restart or a rotate
+const KEY='res28';   // v2.8 levels; old progress (res2*) is ignored
 let li=0,grid,history=[],busy=false,done=JSON.parse(localStorage[KEY+'Done']||'[]');
 const B=document.getElementById('board'),S=document.getElementById('strip'),TR=document.getElementById('track');
 // strip viewport = board width; the track scrolls (transform) when beats don't fit
@@ -217,7 +216,7 @@ function seenHints(){try{return JSON.parse(localStorage[KEY+'Hints']||'[]')}catc
 function showHint(){HP.innerHTML=`${LEVELS[li].hint}<small>Tap to close · ? to reopen</small>`;HP.hidden=false}
 function hideHint(){HP.hidden=true}
 HP.addEventListener('click',e=>{e.stopPropagation();hideHint()});
-function load(i){clearTimers();shown=new Set();sel=null;previewsLeft=PREVIEW_LIMIT;li=i;localStorage[KEY+'Lvl']=i;grid=parse(LEVELS[i]);history=[];busy=false;LP&&clearTimeout(LP);LP=null;longFired=false;
+function load(i){clearTimers();sel=null;previewsLeft=PREVIEW_LIMIT;li=i;localStorage[KEY+'Lvl']=i;grid=parse(LEVELS[i]);history=[];busy=false;LP&&clearTimeout(LP);LP=null;longFired=false;
  const m=document.getElementById('msg');m.classList.remove('show');m.textContent='';m.setAttribute('aria-hidden','true');
  render();strip();fitStrip();playUI();
  document.getElementById('lvl').textContent=`${i+1} / ${LEVELS.length} · ${LEVELS[i].name.toUpperCase()}`;
@@ -239,7 +238,7 @@ function render(){clearTimeout(LP);const s=tileSize();
  grid.forEach((r,y)=>r.forEach((c,x)=>{const d=document.createElement('div');d.className='cell';d.id=`c${x}_${y}`;
   if(!c){d.className+=' slot';B.appendChild(d);return}
   const k=kind(c);d.className+=' tile'+(k==='split'||k==='arrow'?'':' '+(k==='rot'?'rotable':k));
-  d.innerHTML=(k==='delay'?HG:'')+svgFor(c)+(shown.has(x+','+y)?pbar(c.p):'')+(k==='delay'?'<span class="dl">+1 beat</span>':'')+(k==='mute'?'<span class="badge" style="background:#05040c;padding:0 3px;border-radius:4px">×2</span>':'');
+  d.innerHTML=(k==='delay'?HG:'')+svgFor(c)+(k==='delay'?'<span class="dl">+1 beat</span>':'')+(k==='mute'?'<span class="badge" style="background:#05040c;padding:0 3px;border-radius:4px">×2</span>':'');
 
   if(k==='rot'){const b=document.createElement('div');b.className='rot';b.textContent='↻';b.title='Rotate clockwise (right-click / long-press tile: counter-clockwise)';
    b.onpointerdown=e=>e.stopPropagation();b.onclick=e=>{e.stopPropagation();turn(x,y,1)};d.appendChild(b);
@@ -257,11 +256,13 @@ let PREVIEW_LIMIT=new URLSearchParams(location.search).get('preview');PREVIEW_LI
 let sel=null,previewsLeft=null,attempts=0,previews=0;
 function selectable(x,y){const c=grid[y]&&grid[y][x];return !!c&&kind(c)!=='rot'}
 function setSel(x,y){document.querySelectorAll('.tile.sel').forEach(e=>e.classList.remove('sel'));sel=x==null?null:{x,y};
- if(sel)document.getElementById(`c${x}_${y}`).classList.add('sel');playUI()}
+ if(sel){const el=document.getElementById(`c${x}_${y}`);if(el)el.classList.add('sel')}playUI()}
 function pick(x,y){if(busy||!selectable(x,y))return;hideHint();setSel(x,y);
  if(PREVIEW_LIMIT!=null){if(previewsLeft<=0){thud();playUI();return}previewsLeft--}
- previews++;note(grid[y][x].p);const el=document.getElementById(`c${x}_${y}`);el.classList.remove('pv');void el.offsetWidth;el.classList.add('pv');playUI()}
-function playUI(){const b=document.getElementById('play');if(!b)return;b.disabled=!sel||busy;b.title=sel?'Ring the chain from the selected tile (P / Enter)':'Select a tile first: tap it to hear its note';
+ previews++;note(grid[y][x].p);const el=document.getElementById(`c${x}_${y}`);if(el){el.classList.remove('pv');void el.offsetWidth;el.classList.add('pv')}
+ // enable ▶ Play synchronously so a click queued right after this select always lands (Play used to stay disabled for a frame)
+ const b=document.getElementById('play');if(b){b.disabled=false;b.textContent='▶ Play';b.title='Ring the chain from the selected tile (P / Enter)'}}
+function playUI(){const b=document.getElementById('play');if(!b)return;b.disabled=!sel||busy;b.textContent=busy?'Playing…':'▶ Play';b.title=busy?'Playing…':sel?'Ring the chain from the selected tile (P / Enter)':'Select a tile first: tap it to hear its note';b.style.cursor=busy?'wait':'';
  const c=document.getElementById('pvc');if(c){c.hidden=PREVIEW_LIMIT==null;c.textContent=PREVIEW_LIMIT==null?'':`👂 ${previewsLeft}`;c.title=`${previewsLeft} preview${previewsLeft===1?'':'s'} left this attempt`}}
 function playSel(){if(!sel||busy)return;attempts++;previewsLeft=PREVIEW_LIMIT;play(sel.x,sel.y)}
 function moveSel(dx,dy){if(busy)return;const T=[];grid.forEach((r,y)=>r.forEach((c,x)=>{if(selectable(x,y))T.push([x,y])}));if(!T.length)return;
@@ -270,8 +271,8 @@ function moveSel(dx,dy){if(busy)return;const T=[];grid.forEach((r,y)=>r.forEach(
  if(best)pick(best[0],best[1])}
 const PH=p=>Math.round(14+p*(62/(SCALE.length-1)));   // bar height % for pitch p (strip and tiles share the scale)
 const pbar=p=>`<span class="pb" style="height:${(PH(p)*.8).toFixed(1)}%"></span>`;
-function reveal(el,x,y,p){if(!el.querySelector('.pb'))el.insertAdjacentHTML('beforeend',pbar(p));shown.add(x+','+y)}
-function hideBars(){shown.clear();document.querySelectorAll('.pb').forEach(e=>e.remove())}
+function reveal(el,x,y,p){el.querySelectorAll('.pb').forEach(e=>e.remove());el.insertAdjacentHTML('beforeend',pbar(p))}
+function hideBars(){document.querySelectorAll('.pb').forEach(e=>e.remove())}
 // update one tile's arrow in place (no board rebuild, so a click that lands mid-update is never lost)
 function refreshTile(x,y){const el=document.getElementById(`c${x}_${y}`),o=el&&el.querySelector('svg:not(.hg)');if(o)o.outerHTML=svgFor(grid[y][x])}
 function clearStrip(){document.querySelectorAll('#strip .col.hl').forEach(c=>c.classList.remove('hl'))}
@@ -288,7 +289,7 @@ function play(x,y){if(busy||kind(grid[y][x])==='rot')return;hideHint();setTimeou
  for(let b=0;b<beats;b++){const here=ev.filter(e=>e.beat===b);
   later(()=>{follow(b);const good=chordEq(r.melody[b]||[],tgt[b]||[]);   // no visual per-beat mark: only the clash sound reveals which beat is wrong
    here.forEach(e=>{const el=document.getElementById(`c${e.x}_${e.y}`),c=grid[e.y][e.x];if(e.muted){el.classList.add('muted-hit');thud();return}
-    document.querySelectorAll('.rung:not(.past)').forEach(t=>{if(+t.dataset.beat<e.beat)t.classList.add('past')});el.dataset.beat=e.beat;el.classList.add('rung');reveal(el,e.x,e.y,c.p);
+    document.querySelectorAll('.rung:not(.past)').forEach(t=>{if(+t.dataset.beat<e.beat){t.classList.add('past');t.querySelectorAll('.pb,.beatno').forEach(n=>n.remove())}});el.dataset.beat=e.beat;el.classList.add('rung');reveal(el,e.x,e.y,c.p);
     const bn=document.createElement('span');bn.className='beatno';bn.textContent=kind(c)==='delay'?`${e.beat+1}→${e.beat+2}`:e.beat+1;el.appendChild(bn);wave(el);note(c.p);if(!good)clash(c.p)});
    if(!good&&!here.some(e=>!e.muted))clash((tgt[b]||[0])[0]);   // a missing note is wrong too
    if(navigator.vibrate)navigator.vibrate(good?12:[30,20,30])},b*BEAT)}
@@ -302,7 +303,7 @@ function fail(r){const rung=new Set(r.ev.filter(e=>!e.muted).map(e=>e.x+','+e.y)
  later(()=>{m.classList.remove('show');m.textContent='';m.setAttribute('aria-hidden','true');document.querySelectorAll('.rung').forEach(e=>{e.style.transition='background 1s';e.classList.remove('rung','past')});
   later(()=>{busy=false;resetTiles();playUI()},700)},1200)}
 // back to the idle look in place (pitch bars of this attempt stay until the next attempt / Restart / rotate)
-function resetTiles(){setTrack(0);document.querySelectorAll('.tile').forEach(e=>{e.classList.remove('rung','past','silent','muted-hit');e.style.transition='';e.querySelectorAll('.beatno').forEach(b=>b.remove())})}
+function resetTiles(){setTrack(0);document.querySelectorAll('.tile').forEach(e=>{e.classList.remove('rung','past','silent','muted-hit');e.style.transition='';e.querySelectorAll('.beatno,.pb').forEach(b=>b.remove())})}
 function win(){if(soundOn)[0,2,4,5].forEach((p,i)=>note(p,i*.06,.18,2.4));
  const f=document.getElementById('flash');f.style.opacity=1;later(()=>f.style.opacity=0,500);
  document.querySelectorAll('.tile').forEach((t,i)=>later(()=>{t.animate([{transform:'scale(1)'},{transform:'scale(1.05)'},{transform:'scale(1)'}],{duration:400});wave(t)},i*40));
@@ -310,7 +311,7 @@ function win(){if(soundOn)[0,2,4,5].forEach((p,i)=>note(p,i*.06,.18,2.4));
  later(()=>{const w=document.getElementById('win');w.style.display='flex';document.getElementById('next').textContent=li<LEVELS.length-1?'Next ›':'Play again'},1100)}
 document.getElementById('next').onclick=()=>{document.getElementById('win').style.display='none';load(li<LEVELS.length-1?li+1:0)};
 document.getElementById('restart').onclick=()=>load(li);   // allowed any time: cancels a running chain
-document.getElementById('play').onclick=playSel;
+document.getElementById('play').onclick=playSel;document.getElementById('play').onpointerdown=e=>{if(!busy&&sel){e.preventDefault();playSel()}};
 document.getElementById('help').onclick=()=>HP.hidden?showHint():hideHint();
 document.getElementById('undo').onclick=()=>{if(busy||!history.length)return;const [x,y,k]=history.pop();for(let i=0;i<4-k;i++)rotate(grid[y][x]);hideBars();refreshTile(x,y)};
 document.getElementById('sound').onclick=()=>{if(soundOn&&!audioReady()){unlock();return}soundOn=!soundOn;soundUI()};

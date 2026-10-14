@@ -3,7 +3,7 @@
 const pw=require('playwright-core');const ok=(c,m)=>{console.log((c?'PASS ':'FAIL ')+m);if(!c)process.exitCode=1};
 (async()=>{for(const [name,lo] of [['chromium',{executablePath:'/usr/bin/google-chrome'}],['webkit',{}]]){const b=await pw[name].launch(lo);
  for(const w of [320,360,375,390,414,430,768,1024,1280,1440]){const mob=w<1000;const c=await b.newContext({viewport:{width:w,height:mob?844:900},hasTouch:mob,isMobile:mob&&name==='chromium'});
-  await c.addInitScript(()=>{if(!localStorage.res2Hints)localStorage.res2Hints='[0,1,2,3,4,5,6,7,8,9]'});const p=await c.newPage();await p.goto('http://localhost:8765/index.html');
+  await c.addInitScript(()=>{if(!localStorage.res28Hints)localStorage.res28Hints='[0,1,2,3,4,5,6,7,8,9]'});const p=await c.newPage();await p.goto('http://localhost:8765/index.html');
   for(let L=0;L<10;L++){await p.evaluate(i=>load(i),L);await p.waitForTimeout(30);
    const r=await p.evaluate(()=>{const s=document.getElementById('strip').getBoundingClientRect(),bd=board.getBoundingClientRect(),bar=document.getElementById('bar');
     return{dl:Math.abs(s.left-bd.left),dr:Math.abs(s.right-bd.right),sw:document.documentElement.scrollWidth,iw:innerWidth,bsw:document.body.scrollWidth,
@@ -27,7 +27,7 @@ const pw=require('playwright-core');const ok=(c,m)=>{console.log((c?'PASS ':'FAI
    await p.evaluate(()=>{load(li);let s=null;for(let y=0;y<N&&!s;y++)for(let x=0;x<N&&!s;x++)if(grid[y][x]&&kind(grid[y][x])!=='rot'){const r=simulate(grid,x,y);if(r.melody.length>=LEVELS[li].melody.length)s=[x,y]}if(s)play(...s)});
    let mx=0;for(let k=0;k<10;k++){await p.waitForTimeout(150);mx=Math.max(mx,await p.evaluate(()=>trackX))}ok(mx>0,`${name} ${w}px: track follows a chain too`)}
   else ok(await p.evaluate(()=>!S.classList.contains('more-r')),`${name} ${w}px: all beats fit, no scrolling/fade`);
-  if(name==='webkit'&&w===390){await p.evaluate(()=>{localStorage.res2Hints='[]';load(6)});await p.waitForTimeout(700);await p.screenshot({path:'/workspace/resonance_hint_mobile.png'});await p.click('#hintpop');await p.waitForTimeout(700);await p.screenshot({path:'/workspace/resonance_l7_mobile.png'})}
+  if(name==='webkit'&&w===390){await p.evaluate(()=>{localStorage.res28Hints='[]';load(6)});await p.waitForTimeout(700);await p.screenshot({path:'/workspace/resonance_hint_mobile.png'});await p.click('#hintpop');await p.waitForTimeout(700);await p.screenshot({path:'/workspace/resonance_l7_mobile.png'})}
   {const t=await p.evaluate(()=>tileSize());ok(t>=(w<500?Math.floor((w-6*5-24-12)/6):60),`${name} ${w}px: board fills the viewport (tile ${t}px)`)}
   await c.close()}
  await b.close()}})();

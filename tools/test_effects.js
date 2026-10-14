@@ -1,6 +1,6 @@
 // Verifies no ring/wave/glow effect paints outside the board's bbox mid-chain (levels 5, 7, 10).
 const {chromium}=require('playwright-core');const {PNG}=require('pngjs');
-(async()=>{const b=await chromium.launch({executablePath:'/usr/bin/google-chrome'});const p=await b.newPage({viewport:{width:1024,height:760}});await p.addInitScript(()=>{if(!localStorage.res2Hints)localStorage.res2Hints='[0,1,2,3,4,5,6,7,8,9]'});
+(async()=>{const b=await chromium.launch({executablePath:'/usr/bin/google-chrome'});const p=await b.newPage({viewport:{width:1024,height:760}});await p.addInitScript(()=>{if(!localStorage.res28Hints)localStorage.res28Hints='[0,1,2,3,4,5,6,7,8,9]'});
  await p.goto('http://localhost:8765/index.html');let fail=0;
  for(const L of [4,7,9]){await p.evaluate(i=>load(i),L);await p.mouse.move(0,0);await p.waitForTimeout(300+await p.evaluate(()=>350+LEVELS[li].melody.length*180+200));   // load() auto-plays Listen (strip highlight) once audio is on: let it finish
   const box=await p.evaluate(()=>{const r=board.getBoundingClientRect();return{x:r.left,y:r.top,r:r.right,b:r.bottom}});
