@@ -5,11 +5,14 @@
 :root{--bg:#0d0b1a;--tile:#1d1938;--glow:#8ef0ff}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{margin:0;min-height:100vh;background:radial-gradient(circle at 50% 30%,#1c1640,var(--bg) 70%);color:#e9e6ff;font-family:system-ui,-apple-system,Segoe UI,sans-serif;display:flex;flex-direction:column;align-items:center;user-select:none;overflow:hidden}
-header{margin-top:22px;text-align:center;position:relative;z-index:10}
-h1{margin:0;font-weight:300;letter-spacing:.4em;font-size:22px}
-#lvl{opacity:.6;font-size:13px;letter-spacing:.2em;margin-top:6px}
-#hint{min-height:22px;margin:14px 0 18px;opacity:.85;font-size:15px;text-align:center;padding:0 16px}
-#board{display:grid;gap:10px;position:relative;overflow:hidden;padding:12px;border-radius:22px;contain:paint;clip-path:inset(0 round 22px);background:#ffffff06;box-shadow:inset 0 0 0 1px #ffffff14}
+header{margin-top:10px;text-align:center;position:relative;z-index:10}
+h1{margin:0;font-weight:300;letter-spacing:.4em;font-size:16px}
+#lvl{opacity:.6;font-size:11px;letter-spacing:.2em;margin-top:3px}
+#stage{position:relative}
+#hintpop{position:absolute;left:12px;right:12px;top:12px;z-index:6;padding:12px 14px 12px 14px;border-radius:14px;background:#1d1938f2;color:#f4f2ff;font-size:15px;line-height:1.35;box-shadow:0 8px 30px #000b,inset 0 0 0 1px #8ef0ff66;cursor:pointer;backdrop-filter:blur(4px)}
+#hintpop[hidden]{display:none}
+#hintpop small{display:block;margin-top:6px;opacity:.6;font-size:12px}
+#board{display:grid;gap:var(--gap,10px);position:relative;overflow:hidden;padding:12px;border-radius:22px;contain:paint;clip-path:inset(0 round 22px);background:#ffffff06;box-shadow:inset 0 0 0 1px #ffffff14}
 .cell{width:var(--s);height:var(--s);border-radius:16px;position:relative}
 .tile{background:var(--tile);box-shadow:inset 0 0 0 1px #ffffff14;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:transform .12s,background .3s}
 .tile:hover{transform:scale(1.03)}
@@ -23,7 +26,7 @@ h1{margin:0;font-weight:300;letter-spacing:.4em;font-size:22px}
 .tile.rung svg{stroke:#fff}
 .tile.silent{animation:silent .4s ease-in-out 3 alternate;box-shadow:inset 0 0 0 4px #ff3b5c,0 0 0 2px #fff!important}
 @keyframes silent{from{box-shadow:inset 0 0 0 4px #ff3b5c,0 0 0 2px #fff}to{box-shadow:inset 0 0 0 4px #fff,0 0 0 2px #ff3b5c}}
-#msg{min-height:22px;margin:-10px 0 8px;font-size:15px;font-weight:800;letter-spacing:.03em;color:#ffb199;text-shadow:0 0 8px #ff6a4d88,0 1px 2px #000;opacity:0;transition:opacity .2s}#msg.show{opacity:1}
+#msg{min-height:22px;margin:4px 0 4px;font-size:15px;font-weight:800;letter-spacing:.03em;color:#ffb199;text-shadow:0 0 8px #ff6a4d88,0 1px 2px #000;opacity:0;transition:opacity .2s}#msg.show{opacity:1}
 .tile.muted-hit{animation:shake .3s}
 .tile.mute{background:repeating-linear-gradient(45deg,#05040c 0 9px,#3a3560 9px 18px);box-shadow:inset 0 0 0 4px #e9e6ff,0 0 0 2px #000}
 .tile.mute svg{background:#05040ccc;border-radius:50%;padding:3px}
@@ -37,18 +40,18 @@ h1{margin:0;font-weight:300;letter-spacing:.4em;font-size:22px}
 .tile.mute.rung,.tile.delay.rung,.tile.rotable.rung{background:hsl(var(--h),80%,60%)}
 .tile.silent{animation:silent .4s ease-in-out 3 alternate;box-shadow:inset 0 0 0 4px #ff3b5c,0 0 0 2px #fff!important}
 @keyframes silent{from{box-shadow:inset 0 0 0 4px #ff3b5c,0 0 0 2px #fff}to{box-shadow:inset 0 0 0 4px #fff,0 0 0 2px #ff3b5c}}
-#msg{min-height:22px;margin:-10px 0 8px;font-size:15px;font-weight:800;letter-spacing:.03em;color:#ffb199;text-shadow:0 0 8px #ff6a4d88,0 1px 2px #000;opacity:0;transition:opacity .2s}#msg.show{opacity:1}
+#msg{min-height:22px;margin:4px 0 4px;font-size:15px;font-weight:800;letter-spacing:.03em;color:#ffb199;text-shadow:0 0 8px #ff6a4d88,0 1px 2px #000;opacity:0;transition:opacity .2s}#msg.show{opacity:1}
 .tile.muted-hit{box-shadow:inset 0 0 0 4px #ff5a7a,0 0 0 2px #000}
 .tile.ghost{box-shadow:inset 0 0 0 2px #8ef0ff88}
 .badge{position:absolute;font-size:12px;bottom:4px;right:6px;font-weight:700}
-.rot{position:absolute;top:3px;right:3px;width:24px;height:24px;border-radius:50%;background:#f7c948;color:#222;font-size:16px;line-height:24px;text-align:center;cursor:pointer;box-shadow:0 2px 8px #0008;z-index:3}
+.rot{position:absolute;top:2%;right:2%;width:28%;height:28%;border-radius:50%;background:#f7c948;color:#222;font-weight:800;font-size:calc(var(--s)*.24);line-height:calc(var(--s)*.28);text-align:center;cursor:pointer;box-shadow:0 2px 8px #0008;z-index:3}
 .rot:active{transform:scale(.85)}
 .wave{position:absolute;border-radius:50%;pointer-events:none;border:3px solid hsl(var(--h),90%,70%);animation:wave .9s ease-out forwards;z-index:2}
 @keyframes ring{0%{transform:scale(1)}35%{transform:scale(1.05)}100%{transform:scale(1)}}
 @keyframes wave{from{width:0;height:0;opacity:.9;margin:0}to{width:160px;height:160px;margin:-80px;opacity:0}}
 @keyframes shake{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
-#unlock{position:fixed;right:14px;top:14px;z-index:20;background:#f7c948;color:#1a1400;border:0;font-weight:700;box-shadow:0 4px 18px #0009}#unlock:hover{background:#ffd866}#unlock[hidden]{display:none}
-#bar{margin-top:26px;display:flex;flex-wrap:wrap;justify-content:center;gap:10px;max-width:100vw;padding:0 8px}
+#unlock{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom));white-space:nowrap;z-index:20;background:#f7c948;color:#1a1400;border:0;font-weight:700;box-shadow:0 4px 18px #0009}#unlock:hover{background:#ffd866}#unlock[hidden]{display:none}
+#bar{margin-top:14px;display:flex;flex-wrap:wrap;justify-content:center;gap:10px;max-width:100vw;padding:0 8px}
 @media (max-width:420px){#bar button{padding:9px 12px;font-size:13px}}
 button{background:#ffffff12;color:#e9e6ff;border:1px solid #ffffff22;border-radius:999px;padding:10px 18px;font-size:14px;cursor:pointer}
 button:hover{background:#ffffff22}
@@ -58,8 +61,9 @@ button:hover{background:#ffffff22}
 #dots{display:flex;gap:6px;margin-top:8px;justify-content:center}
 #dots .dot{width:14px;height:14px;padding:0;border:3px solid transparent;background-clip:content-box;border-radius:50%;background-color:#ffffff33;cursor:pointer}
 #dots .dot.done{background-color:#8ef0ff}#dots .dot[aria-current]{outline:2px solid #fff}#dots .dot:focus-visible{outline:3px solid #f7c948;outline-offset:2px}
-#tune{margin:0 0 14px;max-width:100vw}
-#strip{position:relative;overflow:hidden;height:136px;padding:10px 0;touch-action:pan-y;cursor:grab;border-radius:14px;background:#05040c;box-shadow:inset 0 0 0 2px #ffffff40}
+#tune{margin:0 0 10px;max-width:100vw}
+#note{position:absolute;top:3px;right:7px;z-index:2;font-size:14px;line-height:16px;opacity:.75;pointer-events:none}
+#strip{position:relative;overflow:hidden;height:118px;padding:10px 0;touch-action:pan-y;cursor:pointer;outline-offset:3px;border-radius:14px;background:#05040c;box-shadow:inset 0 0 0 2px #ffffff40}
 #track{display:flex;align-items:flex-end;gap:6px;height:100%;padding:0 10px;width:max-content;transition:transform .25s ease-out;will-change:transform}
 #track.drag{transition:none}
 #strip.more-r{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 34px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 34px),transparent)}
@@ -73,11 +77,11 @@ button:hover{background:#ffffff22}
 .pb{position:absolute;left:7%;bottom:7%;width:20%;border-radius:4px 4px 2px 2px;background:hsl(var(--h),95%,62%);box-shadow:0 0 0 1.5px #05040c,0 0 0 2.5px #fffc;z-index:3;pointer-events:none}
 </style></head><body>
 <header><h1>RESONANCE</h1><div id="lvl"></div><nav id="dots" aria-label="Levels"></nav></header>
-<div id="hint"></div><div id="msg" aria-live="polite" aria-hidden="true"></div>
-<div id="tune"><div id="strip" aria-label="Target melody"><div id="track"></div></div></div>
-<div id="board"></div>
+<div id="msg" aria-live="polite" aria-hidden="true"></div>
+<div id="tune"><div id="strip" role="button" tabindex="0" aria-label="Target melody: tap to play it (L)" title="Tap to play the tune (L)"><span id="note" aria-hidden="true">♪</span><div id="track"></div></div></div>
+<div id="stage"><div id="board"></div><div id="hintpop" role="status" aria-live="polite" hidden></div></div>
 <button id="unlock" type="button">🔈 Tap to enable sound</button>
-<div id="bar"><button id="listen" title="Play the target melody (L)">♪ Listen</button><button id="undo">↶ Undo</button><button id="restart">⟲ Restart</button><button id="sound">🔊</button></div>
+<div id="bar"><button id="undo">↶ Undo</button><button id="restart">⟲ Restart</button><button id="sound">🔊</button><button id="help" aria-label="Show the hint" title="Hint">?</button></div>
 <div id="flash"></div>
 <div id="win"><h2>RESOLVED</h2><button id="next">Next ›</button></div>
 <script>
@@ -143,14 +147,26 @@ function setTrack(x,anim=true){const m=trackMax();trackX=Math.max(0,Math.min(m,x
  S.classList.toggle('more-l',trackX>1);S.classList.toggle('more-r',trackX<m-1)}
 function follow(i){const c=document.getElementById('b'+i);if(!c||!trackMax())return;setTrack(c.offsetLeft+c.offsetWidth/2-S.clientWidth/2)}
 function fitStrip(){S.style.width=B.offsetWidth+'px';setTrack(0)}
-{let d=null;S.addEventListener('pointerdown',e=>{if(!trackMax())return;d={x:e.clientX,t:trackX};try{S.setPointerCapture(e.pointerId)}catch(_){}});
- S.addEventListener('pointermove',e=>{if(d)setTrack(d.t-(e.clientX-d.x),false)});
- const end=()=>{d=null;TR.classList.remove('drag')};S.addEventListener('pointerup',end);S.addEventListener('pointercancel',end)}
+// strip: drag/swipe scrolls; a clean tap (< 8px movement, < 400ms) replays the tune. Playback starts from the click
+// event (after touchend) so iOS treats it as a valid audio gesture.
+{let d=null,clean=false;S.addEventListener('pointerdown',e=>{d={x:e.clientX,y:e.clientY,t:trackX,at:performance.now(),moved:0};clean=false;if(trackMax())try{S.setPointerCapture(e.pointerId)}catch(_){}});
+ S.addEventListener('pointermove',e=>{if(!d)return;d.moved=Math.max(d.moved,Math.hypot(e.clientX-d.x,e.clientY-d.y));if(trackMax()&&d.moved>=8)setTrack(d.t-(e.clientX-d.x),false)});
+ S.addEventListener('pointerup',e=>{if(d){d.moved=Math.max(d.moved,Math.hypot(e.clientX-d.x,e.clientY-d.y));clean=d.moved<8&&performance.now()-d.at<400}d=null;TR.classList.remove('drag')});
+ S.addEventListener('pointercancel',()=>{d=null;clean=false;TR.classList.remove('drag')});
+ S.addEventListener('click',()=>{if(clean){clean=false;listen()}});
+ S.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();listen()}})}
+// hint popover: auto-shown once per device on levels that introduce a mechanic; '?' reopens; tap or first move dismisses
+const HINT_AUTO=[0,1,2,4,5,6];   // basics, gaps, split, mute, delay, dial
+const HP=document.getElementById('hintpop');
+function seenHints(){try{return JSON.parse(localStorage[KEY+'Hints']||'[]')}catch(e){return[]}}
+function showHint(){HP.innerHTML=`${LEVELS[li].hint}<small>Tap to close · ? to reopen</small>`;HP.hidden=false}
+function hideHint(){HP.hidden=true}
+HP.addEventListener('click',e=>{e.stopPropagation();hideHint()});
 function load(i){clearTimers();shown=new Set();li=i;localStorage[KEY+'Lvl']=i;grid=parse(LEVELS[i]);history=[];busy=false;LP&&clearTimeout(LP);LP=null;longFired=false;
  const m=document.getElementById('msg');m.classList.remove('show');m.textContent='';m.setAttribute('aria-hidden','true');
  render();strip();fitStrip();
  document.getElementById('lvl').textContent=`${i+1} / ${LEVELS.length} · ${LEVELS[i].name.toUpperCase()}`;
- document.getElementById('hint').textContent=LEVELS[i].hint;
+ hideHint();if(HINT_AUTO.includes(i)&&!seenHints().includes(i)){localStorage[KEY+'Hints']=JSON.stringify([...seenHints(),i]);showHint()}
  document.getElementById('dots').innerHTML=LEVELS.map((L,j)=>`<button type="button" class="dot${done.includes(j)?' done':''}" data-j="${j}" aria-label="Level ${j+1}: ${L.name}${done.includes(j)?' (solved)':''}" title="Level ${j+1}: ${L.name}"${j===i?' aria-current="step"':''}></button>`).join('');
  document.querySelectorAll('#dots .dot').forEach(e=>e.onclick=()=>{document.getElementById('win').style.display='none';load(+e.dataset.j)});
  if(audioReady())later(listen,350);else soundUI()}   // auto-play the tune only once sound is unlocked; never creates the context
@@ -159,9 +175,12 @@ function strip(){const m=LEVELS[li].melody;TR.innerHTML=m.map((ch,i)=>`<div clas
 let LT=[];   // Listen highlight timers: cancelled (and the highlight cleared) when a chain starts or the level reloads
 function listen(){if(busy)return;unlock();LT.forEach(clearTimeout);LT=[];clearStrip();playMelody(LEVELS[li].melody);const cols=[...document.querySelectorAll('#strip .col')];
  cols.forEach((c,i)=>LT.push(later(()=>{clearStrip();c.classList.add('hl');follow(i)},i*BEAT)));LT.push(later(clearStrip,cols.length*BEAT));LT.push(later(()=>setTrack(0),cols.length*BEAT+400))}
-function tileSize(){return Math.max(34,Math.min(68,Math.floor((Math.min(innerWidth,560)-24-50-12)/N),Math.floor((innerHeight-445)/N)-10))}
+// board as large as the viewport allows: width minus board padding/gaps/margin, height minus header, strip and controls
+function gapPx(){return innerWidth<520?6:10}
+function tileSize(){const g=gapPx()*(N-1)+24,used=document.querySelector('header').offsetHeight+document.getElementById('msg').offsetHeight+document.getElementById('tune').offsetHeight+document.getElementById('bar').offsetHeight+10+8+10+14+16;
+ return Math.max(34,Math.min(120,Math.floor((Math.min(innerWidth,1000)-g-12)/N),Math.floor((innerHeight-used-g)/N)))}
 function render(){clearTimeout(LP);const s=tileSize();
- B.style.setProperty('--s',s+'px');B.style.gridTemplateColumns=`repeat(${N},${s}px)`;B.innerHTML='';
+ B.style.setProperty('--s',s+'px');B.style.setProperty('--gap',gapPx()+'px');B.style.gridTemplateColumns=`repeat(${N},${s}px)`;B.innerHTML='';
  grid.forEach((r,y)=>r.forEach((c,x)=>{const d=document.createElement('div');d.className='cell';d.id=`c${x}_${y}`;
   if(!c){d.className+=' slot';B.appendChild(d);return}
   const k=kind(c);d.className+=' tile'+(k==='split'||k==='arrow'?'':' '+(k==='rot'?'rotable':k));
@@ -184,12 +203,12 @@ function refreshTile(x,y){const el=document.getElementById(`c${x}_${y}`),o=el&&e
 function clearStrip(){document.querySelectorAll('#strip .col.hl').forEach(c=>c.classList.remove('hl'))}
 const HG='<svg class="hg" viewBox="0 0 24 24" fill="#ffb02e"><path d="M6 2h12v2c0 4-4 6-4 8s4 4 4 8v2H6v-2c0-4 4-6 4-8S6 8 6 4z"/></svg>';
 // k=1 clockwise, k=3 counter-clockwise; history stores the step so undo inverts it
-function turn(x,y,k){clearTimeout(LP);if(busy)return;const c=grid[y][x];for(let i=0;i<k;i++)rotate(c);history.push([x,y,k]);thud();hideBars();refreshTile(x,y);preview(x,y)}
+function turn(x,y,k){clearTimeout(LP);if(busy)return;hideHint();const c=grid[y][x];for(let i=0;i<k;i++)rotate(c);history.push([x,y,k]);thud();hideBars();refreshTile(x,y);preview(x,y)}
 function clearPreview(){document.querySelectorAll('.ghost').forEach(e=>e.classList.remove('ghost'))}
 function preview(x,y){if(busy)return;clearPreview();if(!grid[y][x])return;
  targets(grid,x,y).forEach(([a,b])=>document.getElementById(`c${a}_${b}`).classList.add('ghost'))}
 function wave(el){const w=document.createElement('div');w.className='wave';w.style.left='50%';w.style.top='50%';w.style.setProperty('--h',el.style.getPropertyValue('--h'));el.appendChild(w);later(()=>w.remove(),900)}
-function play(x,y){if(busy||kind(grid[y][x])==='rot')return;busy=true;clearPreview();ac();const r=simulate(grid,x,y),ev=r.ev,tgt=LEVELS[li].melody;
+function play(x,y){if(busy||kind(grid[y][x])==='rot')return;hideHint();busy=true;clearPreview();ac();const r=simulate(grid,x,y),ev=r.ev,tgt=LEVELS[li].melody;
  LT.forEach(clearTimeout);LT=[];clearStrip();hideBars();
  const beats=Math.max(r.melody.length,tgt.length);
  for(let b=0;b<beats;b++){const here=ev.filter(e=>e.beat===b);
@@ -217,7 +236,7 @@ function win(){if(soundOn)[0,2,4,5].forEach((p,i)=>note(p,i*.06,.18,2.4));
  later(()=>{const w=document.getElementById('win');w.style.display='flex';document.getElementById('next').textContent=li<LEVELS.length-1?'Next ›':'Play again'},1100)}
 document.getElementById('next').onclick=()=>{document.getElementById('win').style.display='none';load(li<LEVELS.length-1?li+1:0)};
 document.getElementById('restart').onclick=()=>load(li);   // allowed any time: cancels a running chain
-document.getElementById('listen').onclick=listen;
+document.getElementById('help').onclick=()=>HP.hidden?showHint():hideHint();
 document.getElementById('undo').onclick=()=>{if(busy||!history.length)return;const [x,y,k]=history.pop();for(let i=0;i<4-k;i++)rotate(grid[y][x]);hideBars();refreshTile(x,y)};
 document.getElementById('sound').onclick=()=>{if(soundOn&&!audioReady()){unlock();return}soundOn=!soundOn;soundUI()};
 document.getElementById('unlock').onclick=()=>{unlock();soundOn=true;soundUI();setTimeout(()=>{if(!busy)listen()},60)};
