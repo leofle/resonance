@@ -231,7 +231,7 @@
 },
 {
 "name": "Turn",
-"hint": "Tap ↻ to rotate a tile (right-click or hold to turn back). Tune the dials, then play the tune.",
+"hint": "Gold dials only turn: tap one to rotate it clockwise (right-click or hold to turn back). A dial can never start the chain, so tune the dials, then tap a plain tile.",
 "rows": [
 ". . R^:0 <:0 . .",
 "^:2 . . S|:4 . .",
@@ -272,7 +272,7 @@
 },
 {
 "name": "Chorus",
-"hint": "Splits, silence, delay and a dial: count the beats.",
+"hint": "Splits, silence, delay and a dial: count the beats. Dials turn when tapped; they never start the chain.",
 "rows": [
 ". . . . >:0 v:5",
 ". . . . . .",
@@ -314,7 +314,7 @@
 },
 {
 "name": "Tuning",
-"hint": "Three dials. Every setting rings, only one sings.",
+"hint": "Three dials. Every setting rings, only one sings. Dials turn when tapped; they never start the chain.",
 "rows": [
 ". . v:5 . . S|:1",
 "S-:2 . . . >:1 ^:0",
@@ -354,7 +354,7 @@
 },
 {
 "name": "Finale",
-"hint": "Everything you know, together.",
+"hint": "Everything you know, together. Dials turn when tapped; they never start the chain.",
 "rows": [
 ". . v:3 . . R>:1",
 ". . . . . .",

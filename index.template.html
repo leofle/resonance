@@ -126,7 +126,7 @@ function render(){clearTimeout(LP);const s=tileSize();
    d.oncontextmenu=e=>{e.preventDefault();clearTimeout(LP);if(!longFired)turn(x,y,3)};
    d.onpointerdown=e=>{longFired=false;if(e.button)return;clearTimeout(LP);LP=setTimeout(()=>{LP=null;longFired=true;turn(x,y,3)},450)};d.onpointerup=d.onpointerleave=()=>{clearTimeout(LP)}}
   else d.oncontextmenu=e=>e.preventDefault();
-  d.onclick=()=>{if(longFired){longFired=false;return}play(x,y)};d.onmouseenter=()=>preview(x,y);d.onmouseleave=clearPreview;
+  d.onclick=()=>{if(longFired){longFired=false;return}if(k==='rot'){turn(x,y,1);return}play(x,y)};   // dials only turn, never start a chaind.onmouseenter=()=>preview(x,y);d.onmouseleave=clearPreview;
   B.appendChild(d)}))}
 let LP=null,longFired=false;
 const PH=p=>Math.round(14+p*(62/(SCALE.length-1)));   // bar height % for pitch p (strip and tiles share the scale)
@@ -139,7 +139,7 @@ function clearPreview(){document.querySelectorAll('.ghost').forEach(e=>e.classLi
 function preview(x,y){if(busy)return;clearPreview();if(!grid[y][x])return;
  targets(grid,x,y).forEach(([a,b])=>document.getElementById(`c${a}_${b}`).classList.add('ghost'))}
 function wave(el){const w=document.createElement('div');w.className='wave';w.style.left='50%';w.style.top='50%';w.style.setProperty('--h',el.style.getPropertyValue('--h'));el.appendChild(w);later(()=>w.remove(),900)}
-function play(x,y){if(busy)return;busy=true;clearPreview();ac();const r=simulate(grid,x,y),ev=r.ev,tgt=LEVELS[li].melody;
+function play(x,y){if(busy||kind(grid[y][x])==='rot')return;busy=true;clearPreview();ac();const r=simulate(grid,x,y),ev=r.ev,tgt=LEVELS[li].melody;
  document.querySelectorAll('#strip .col').forEach(c=>c.classList.remove('hl'));
  const beats=Math.max(r.melody.length,tgt.length);
  for(let b=0;b<beats;b++){const here=ev.filter(e=>e.beat===b);

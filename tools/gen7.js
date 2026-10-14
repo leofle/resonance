@@ -28,7 +28,7 @@ function dangling(g,tx,ty){const gr=G(g);const {ev}=E.simulate(gr,tx,ty);const o
 function rotPos(g){const P=[];g.forEach((r,y)=>r.forEach((t,x)=>{if(t[0]==='R')P.push([x,y])}));return P}
 function coverage(g,P){const pos=rotPos(g);const out=[];
  for(let m=0;m<4**pos.length;m++){const gr=E.parse({rows:rowsOf(g,P)});let mm=m;const ks=[];pos.forEach(([x,y])=>{const k=mm%4;mm=Math.floor(mm/4);ks.push(k);for(let i=0;i<k;i++)E.rotate(gr[y][x])});
-  for(let y=0;y<N;y++)for(let x=0;x<N;x++)if(gr[y][x]){const r=E.simulate(gr,x,y);if(r.solved)out.push({ks,x,y,melody:r.melody})}}return out}
+  for(let y=0;y<N;y++)for(let x=0;x<N;x++)if(gr[y][x]&&E.kind(gr[y][x])!=="rot"){const r=E.simulate(gr,x,y);if(r.solved)out.push({ks,x,y,melody:r.melody})}}return out}
 const rnd=([a,b])=>a+Math.floor(Math.random()*(b-a+1));
 const t0=Date.now();let it=0;
 outer:while(Date.now()-t0<T){it++;const n=rnd(sp.n),nD=rnd(sp.D),nM=rnd(sp.M);
