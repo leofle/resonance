@@ -2,7 +2,7 @@
 const {chromium}=require('playwright-core');const {PNG}=require('pngjs');
 (async()=>{const b=await chromium.launch({executablePath:'/usr/bin/google-chrome'});const p=await b.newPage({viewport:{width:1024,height:760}});
  await p.goto('http://localhost:8765/index.html');let fail=0;
- for(const L of [4,6,9]){await p.evaluate(i=>load(i),L);await p.mouse.move(0,0);await p.waitForTimeout(300);
+ for(const L of [4,7,9]){await p.evaluate(i=>load(i),L);await p.mouse.move(0,0);await p.waitForTimeout(300);
   const box=await p.evaluate(()=>{const r=board.getBoundingClientRect();return{x:r.left,y:r.top,r:r.right,b:r.bottom}});
   const base=PNG.sync.read(await p.screenshot());
   const s=await p.evaluate(()=>{const P=[];grid.forEach((r,y)=>r.forEach((c,x)=>{if(c&&kind(c)==='rot')P.push([x,y])}));
