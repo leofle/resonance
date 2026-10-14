@@ -70,39 +70,76 @@
 ]
 },
 {
-"name": "Split",
-"hint": "A split tile always rings out of both its sides, whichever side the ring came in from. Several starts ring every tile, but only one plays the tune.",
+"name": "Dial",
+"hint": "Gold dials only turn: tap one to rotate it clockwise (right-click or hold to turn back). Dials always start pointing the wrong way and can never start the chain: set them, then select a plain tile and press ▶ Play.",
 "rows": [
-". . . S-:1 . <:2",
+">:3 . . . . v:4",
+"^:0 . . . . v:3",
+"Rv:2 . . . . .",
+"^:3 . . . . .",
 ". . . . . .",
-". S|:5 S-:2 S|:3 . .",
-". . S|:0 S|:3 . .",
-". . S|:1 S-:5 . S-:2",
-". . >:3 <:3 . ."
+"^:4 . . <:3 . <:4"
 ],
 "melody": [
 [
-2
-],
-[
-3,
-5
-],
-[
-1,
 3
 ],
 [
-2,
-5
+4
 ],
 [
-1,
+3
+],
+[
+4
+],
+[
+3
+],
+[
+4
+],
+[
+3
+],
+[
 2
+],
+[
+0
+]
+]
+},
+{
+"name": "Split",
+"hint": "A split tile always rings out of both its sides, whichever side the ring came in from. Several starts ring every tile, but only one plays the tune.",
+"rows": [
+"<:3 >:5 v:4 . . .",
+". . . . . .",
+". . . . . .",
+". S|:5 . <:5 . .",
+"^:4 R<:0 . . . .",
+"^:5 S-:5 . ^:0 . ."
+],
+"melody": [
+[
+5
 ],
 [
 0,
-3
+5
+],
+[
+4,
+5
+],
+[
+0,
+5
+],
+[
+4,
+5
 ],
 [
 3
@@ -111,18 +148,30 @@
 },
 {
 "name": "Branches",
-"hint": "Many starts ring every tile. Listen: only one plays the tune.",
+"hint": "Many starts ring every tile, and several begin like the tune. Listen to the whole strip: only one plays it.",
 "rows": [
-"S-:1 . v:3 . . .",
-"S|:0 S-:1 . . >:5 .",
-"S|:4 . S-:0 . S|:3 .",
-"S|:0 S|:2 . . . .",
-">:1 S|:1 . . . .",
-". . . . . ."
+"S-:4 . v:1 . . .",
+". . . . . .",
+"S|:1 . . . . Rv:4",
+">:2 . . R^:4 . .",
+". S|:1 . S-:4 . S|:1",
+". . v:0 >:4 . <:2"
 ],
 "melody": [
 [
-0
+1
+],
+[
+2,
+4
+],
+[
+1,
+4
+],
+[
+2,
+4
 ],
 [
 1,
@@ -130,19 +179,7 @@
 ],
 [
 0,
-3
-],
-[
-0,
-1
-],
-[
-1,
-3
-],
-[
-2,
-5
+4
 ],
 [
 1
@@ -153,15 +190,29 @@
 "name": "Hush",
 "hint": "Striped tiles stay silent unless two rings hit them on the same beat; then they join the chord.",
 "rows": [
-". . . >:4 v:0 .",
-"S-:4 S-:4 . S|:0 M^:2 .",
-". . . S-:1 S|:5 .",
-". S|:4 S-:2 . . .",
-". Mv:1 S|:2 . S-:4 S-:5",
-". ^:0 <:4 . . ."
+"v:0 . S-:4 . . Mv:4",
+". . S|:0 S-:0 S-:4 ^:3",
+". ^:4 . . Rv:4 .",
+". . >:0 . S|:3 .",
+". ^:0 . . <:0 .",
+". . . . . ."
 ],
 "melody": [
 [
+0
+],
+[
+0,
+4
+],
+[
+0,
+3,
+4
+],
+[
+0,
+3,
 4
 ],
 [
@@ -169,31 +220,8 @@
 4
 ],
 [
-1,
-4
-],
-[
-0,
-5
-],
-[
-2,
-4
-],
-[
-2,
-5
-],
-[
-2,
-4
-],
-[
 0,
 4
-],
-[
-1
 ]
 ]
 },
@@ -201,116 +229,55 @@
 "name": "Delay",
 "hint": "Hourglass tiles hold the ring one extra beat before passing it on.",
 "rows": [
-". D>:0 . >:4 . .",
-". S|:3 . S-:1 S-:1 Dv:5",
-"^:0 S|:2 . . . .",
-". . . . S|:1 v:0",
-"D^:1 S-:4 S-:3 . S|:1 .",
-". . <:3 . D<:3 ."
+". ^:4 v:4 . S-:2 v:1",
+". S|:2 S-:2 >:2 . .",
+". . . . . .",
+". . . . . .",
+"v:2 S-:1 . . Rv:5 .",
+"D>:5 . . . . ^:5"
 ],
 "melody": [
 [
-1
+2
 ],
 [
 1,
-3
+4
 ],
 [
-0,
 2,
 5
 ],
 [
-4
-],
-[
-0,
-1,
-3,
-4
-],
-[
-1
-],
-[
-0,
-1,
-3
-],
-[],
-[
-3
-]
-]
-},
-{
-"name": "Turn",
-"hint": "Gold dials only turn: tap one to rotate it clockwise (right-click or hold to turn back). A dial can never start the chain: tune the dials, then select a plain tile and press ▶ Play.",
-"rows": [
-"S|:3 . . <:0 . .",
-". . . ^:0 . .",
-". . . . . .",
-". . . S|:0 . .",
-"S|:5 S-:0 R>:4 S|:1 . .",
-". . Rv:5 <:4 . ."
-],
-"melody": [
-[
-0
-],
-[
-0,
-1
-],
-[
-0,
-4
-],
-[
-3,
+2,
 5
 ],
 [
-4,
+1,
+4
+],
+[
+2,
 5
 ],
 [
-0
+2
 ]
 ]
 },
 {
 "name": "Chorus",
-"hint": "Splits, silence, delay and a dial: count the beats. Dials turn when tapped; they never start the chain.",
+"hint": "Splits, silence, delay and a dial: count the beats.",
 "rows": [
+"v:5 . S-:5 v:2 D>:0 Mv:4",
+". . . . S|:4 .",
+". . S|:2 . S-:4 S|:4",
 ". . . . . .",
-". . S|:0 . S-:0 v:3",
-"M<:2 . . S-:1 S|:4 .",
-". . . S|:2 . S-:5",
-"D^:4 <:3 S-:0 ^:1 . .",
-". . ^:2 . Rv:4 ."
+"v:5 . Rv:0 ^:1 . .",
+". . v:4 . <:0 <:3"
 ],
 "melody": [
 [
-0
-],
-[
-0
-],
-[
-1,
-3
-],
-[
-2,
-4
-],
-[
-1
-],
-[
-2,
 4
 ],
 [
@@ -319,107 +286,112 @@
 ],
 [
 2,
-3
+4
 ],
 [
+0,
+3,
+4,
+5
+],
+[
+0,
+1,
+2,
+5
+],
+[
+4,
 5
 ]
 ]
 },
 {
 "name": "Tuning",
-"hint": "Three dials. Every setting rings, only one sings. Dials turn when tapped; they never start the chain.",
+"hint": "Three dials. Every setting rings, only one sings.",
 "rows": [
-". S-:5 . v:1 . .",
-"S|:3 S-:5 . . R^:4 R^:2",
-". S|:3 <:3 S-:5 Rv:5 S|:0",
-"S-:1 . v:4 . <:2 .",
-"^:4 S-:1 . . ^:2 .",
-". . . . . ."
+"R^:5 R>:5 <:0 . . S-:2",
+". . . S|:2 S-:0 ^:0",
+". v:3 . . . <:2",
+". ^:0 . . . .",
+". . . . . .",
+"S|:5 Rv:5 . S-:3 . ^:4"
 ],
 "melody": [
 [
-5
+0
 ],
 [
-1
+0,
+2
 ],
 [
-5
-],
-[
-3,
-5
-],
-[
-3,
-4
-],
-[
-1,
 2,
+3
+],
+[
+0,
+4,
 5
 ],
 [
 0,
 2,
+5
+],
+[
 3,
-4
+5
 ],
 [
-1,
-2
-],
-[
-4
+5
 ]
 ]
 },
 {
 "name": "Finale",
-"hint": "Everything you know, together. Dials turn when tapped; they never start the chain.",
+"hint": "Everything you know, together.",
 "rows": [
-"Rv:0 . S|:2 . . .",
-". . v:3 . . S-:1",
-"S|:2 . S-:1 . S-:4 S|:1",
-"D>:2 . . >:5 R^:2 .",
-". . . S|:4 . <:0",
-". . <:2 S-:3 Mv:1 ."
+"R<:0 . >:1 . . v:3",
+"S|:5 . . . . <:4",
+". v:2 . . S-:2 S|:5",
+". . . . D^:2 .",
+"M>:5 . . v:2 . v:2",
+"^:2 S-:1 Rv:4 S-:3 . ."
 ],
 "melody": [
 [
-1
+2
+],
+[],
+[
+2
 ],
 [
-3
+2,
+5
 ],
 [
-1
-],
-[
+1,
 2,
 4
 ],
 [
-0,
-1,
-2
-],
-[
-0,
-2
-],
-[
+2,
 4,
 5
 ],
 [
-2,
-3
+0,
+3,
+5
 ],
 [
 1,
 2
+],
+[
+3
 ]
 ]
 }
