@@ -1,0 +1,160 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>Resonance</title>
+<style>
+:root{--bg:#0d0b1a;--tile:#1d1938;--glow:#8ef0ff}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;min-height:100vh;background:radial-gradient(circle at 50% 30%,#1c1640,var(--bg) 70%);color:#e9e6ff;font-family:system-ui,-apple-system,Segoe UI,sans-serif;display:flex;flex-direction:column;align-items:center;user-select:none;overflow:hidden}
+header{margin-top:22px;text-align:center}
+h1{margin:0;font-weight:300;letter-spacing:.4em;font-size:22px}
+#lvl{opacity:.6;font-size:13px;letter-spacing:.2em;margin-top:6px}
+#hint{min-height:22px;margin:14px 0 18px;opacity:.85;font-size:15px;text-align:center;padding:0 16px}
+#board{display:grid;gap:10px;position:relative;overflow:hidden;padding:12px;border-radius:22px;contain:paint}
+.cell{width:var(--s);height:var(--s);border-radius:16px;position:relative}
+.tile{background:var(--tile);box-shadow:inset 0 0 0 1px #ffffff14;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:transform .12s,background .3s}
+.tile:hover{transform:scale(1.03)}
+.tile:active{transform:scale(.94)}
+.tile svg{position:relative;z-index:1;width:46%;height:46%;transition:transform .2s cubic-bezier(.3,1.6,.5,1);filter:drop-shadow(0 0 4px #fff3)}
+.tile.rung{background:hsl(var(--h),80%,60%);animation:ring .45s ease-out;box-shadow:inset 0 0 18px 4px #fff9,0 0 0 2px #fff}
+.tile.rung.past{background:hsl(var(--h),35%,34%);box-shadow:inset 0 0 0 2px hsl(var(--h),60%,55%);animation:none}
+.tile.rung.past svg{stroke:#ffffffaa}
+.beatno{position:absolute;top:4px;left:7px;font:700 13px system-ui;color:#fff;text-shadow:0 1px 3px #000;pointer-events:none;animation:fadeno 1.4s forwards}
+@keyframes fadeno{0%,60%{opacity:1}100%{opacity:0}}
+.tile.rung svg{stroke:#fff}
+.tile.muted-hit{animation:shake .3s}
+.tile.mute{background:repeating-linear-gradient(45deg,#05040c 0 9px,#3a3560 9px 18px);box-shadow:inset 0 0 0 4px #e9e6ff,0 0 0 2px #000}
+.tile.mute svg{background:#05040ccc;border-radius:50%;padding:3px}
+.tile.delay{background:radial-gradient(circle,transparent 38%,#ffb02e 39% 46%,transparent 47% 58%,#ffb02e88 59% 63%,transparent 64%),linear-gradient(#5a3a08,#3d2705);box-shadow:inset 0 0 0 3px #ffb02e}
+.tile.delay .hg{position:absolute;inset:0;width:100%;height:100%;opacity:.35;pointer-events:none}
+.tile.rotable{background:conic-gradient(from 0deg,#2b2350,#4a3d12,#2b2350,#4a3d12,#2b2350);box-shadow:inset 0 0 0 3px #f7c948}
+.tile.mute.rung.past,.tile.delay.rung.past{filter:saturate(.6)}
+.tile.mute.rung,.tile.delay.rung,.tile.rotable.rung{background:hsl(var(--h),80%,60%)}
+.tile.muted-hit{box-shadow:inset 0 0 0 4px #ff5a7a,0 0 0 2px #000}
+.tile.ghost{box-shadow:inset 0 0 0 2px #8ef0ff88}
+.badge{position:absolute;font-size:12px;bottom:4px;right:6px;font-weight:700}
+.rot{position:absolute;top:3px;right:3px;width:24px;height:24px;border-radius:50%;background:#f7c948;color:#222;font-size:16px;line-height:24px;text-align:center;cursor:pointer;box-shadow:0 2px 8px #0008;z-index:3}
+.rot:active{transform:scale(.85)}
+.wave{position:absolute;border-radius:50%;pointer-events:none;border:3px solid hsl(var(--h),90%,70%);animation:wave .9s ease-out forwards;z-index:2}
+@keyframes ring{0%{transform:scale(1)}35%{transform:scale(1.05)}100%{transform:scale(1)}}
+@keyframes wave{from{width:0;height:0;opacity:.9;margin:0}to{width:160px;height:160px;margin:-80px;opacity:0}}
+@keyframes shake{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+#bar{margin-top:26px;display:flex;gap:12px}
+button{background:#ffffff12;color:#e9e6ff;border:1px solid #ffffff22;border-radius:999px;padding:10px 18px;font-size:14px;cursor:pointer}
+button:hover{background:#ffffff22}
+#win{position:fixed;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;background:#0d0b1aee;backdrop-filter:blur(6px);z-index:9}
+#win h2{font-weight:300;letter-spacing:.3em;font-size:30px;margin:0 0 20px}
+#flash{position:fixed;inset:0;pointer-events:none;background:radial-gradient(circle,#8ef0ff55,transparent 60%);opacity:0;transition:opacity .8s}
+#dots{display:flex;gap:6px;margin-top:8px;justify-content:center}
+#dots i{width:8px;height:8px;border-radius:50%;background:#ffffff22;cursor:pointer}
+#dots i.done{background:#8ef0ff}#dots i.cur{outline:2px solid #fff}
+</style></head><body>
+<header><h1>RESONANCE</h1><div id="lvl"></div><div id="dots"></div></header>
+<div id="hint"></div>
+<div id="board"></div>
+<div id="bar"><button id="undo">↶ Undo</button><button id="restart">⟲ Restart</button><button id="sound">🔊</button></div>
+<div id="flash"></div>
+<div id="win"><h2>RESOLVED</h2><button id="next">Next ›</button></div>
+<script>
+// Tokens: "." empty | ">" "<" "^" "v" arrow | "S-" split left+right | "S|" split up+down
+// "D?" delay arrow (rings one beat later) | "M?" mute arrow (needs 2 hits) | "R?" rotatable arrow
+const DIRS={'>':[1,0],'<':[-1,0],'^':[0,-1],'v':[0,1]};
+const ROT={'>':'v','v':'<','<':'^','^':'>'};
+const LEVELS=[
+ {name:"First Note",hint:"Tap a tile. Its ring travels where the arrow points.",rows:["> > > >"]},
+ {name:"Corner",hint:"Rings follow every turn.",rows:["> > v",". . v","< < <"]},
+ {name:"Gaps",hint:"A ring jumps empty space to the next tile.",rows:["> . . v","^ . . .","^ . . v","^ < . <"]},
+ {name:"Split",hint:"Split tiles send the ring both ways.",rows:[". ^ .","< S- >",". ^ ."].map(r=>r)},
+ {name:"Branches",hint:"Find the one tile that reaches everything.",rows:["v . . S- .","> . . ^ .","S| . . ^ .","v . . . .","> > > ^ ."]},
+ {name:"Delay",hint:"Hourglass tiles wait one extra beat.",rows:["> D> v",". . v","^ < <"]},
+ {name:"Hush",hint:"Muted tiles only ring on their second hit.",rows:["S- > M> > .",". . . . .","^ . . . ."]},
+ {name:"Two Voices",hint:"Two rings must reach the muted tile.",rows:["> v . .",". > M> v","S| ^ . v",". . . v",". . . <"]},
+ {name:"Turn",hint:"Tap the ↻ on a tile to rotate it before you play.",rows:["> R> . v",". . . v","R> . . <"]},
+ {name:"Finale",hint:"Everything you've learned, together.",rows:["R> . S| . R<",". . . . .","M^ . D^ . v","^ . . . v","^ < R> < <"]},
+];
+function parse(lv){return lv.rows.map(r=>r.trim().split(/\s+/).map(t=>t==='.'?null:{t:t}));}
+function tileDirs(c){const k=c.t;if(k==='S-')return['<','>'];if(k==='S|')return['^','v'];return[k[k.length-1]];}
+function kind(c){const k=c.t;if(k[0]==='S')return'split';if(k.length===1)return'arrow';return{D:'delay',M:'mute',R:'rot'}[k[0]];}
+function rotate(c){const d=c.t[1];c.t='R'+ROT[d];}
+// Timing rule (build 4): rings resolve beat by beat. A mute tile only rings when
+// TWO OR MORE rings arrive on the SAME beat; a lone ring is absorbed (no memory carries
+// over to later beats). Delay tiles emit 2 beats after ringing instead of 1, which
+// shifts arrival times and so decides whether rings coincide at a mute.
+// returns events [{beat,x,y,muted?}] and solved flag
+function targets(grid,x0,y0){const H=grid.length,W=grid[0].length,out=[];
+ for(const d of tileDirs(grid[y0][x0])){let [dx,dy]=DIRS[d],x=x0+dx,y=y0+dy;
+  while(x>=0&&y>=0&&x<W&&y<H&&!grid[y][x]){x+=dx;y+=dy;}
+  if(x>=0&&y>=0&&x<W&&y<H)out.push([x,y]);}return out}
+function simulate(grid,sx,sy){
+ const rung=new Set(),ev=[],arr={0:{[sx+','+sy]:1}};
+ const total=grid.flat().filter(Boolean).length;
+ for(let b=0;b<=Math.max(...Object.keys(arr).map(Number));b++){const here=arr[b];if(!here)continue;
+  for(const key of Object.keys(here).sort()){if(rung.has(key))continue;const [x,y]=key.split(',').map(Number);const c=grid[y][x];
+   if(kind(c)==='mute'&&here[key]<2){ev.push({beat:b,x,y,muted:true});continue;}
+   rung.add(key);ev.push({beat:b,x,y});const lag=kind(c)==='delay'?2:1;
+   for(const [tx,ty] of targets(grid,x,y)){const k2=tx+','+ty;(arr[b+lag]=arr[b+lag]||{})[k2]=(arr[b+lag][k2]||0)+1;}}}
+ return{ev,solved:rung.size===total};
+}
+//if(typeof module!=='undefined')module.exports={LEVELS,parse,simulate,kind,rotate,targets};
+
+LEVELS.splice(0,LEVELS.length,...[{"name": "First Note", "hint": "Tap a tile. Its ring travels where the arrow points.", "rows": ["> > v", ". . v", "< < <"]}, {"name": "Gaps", "hint": "Rings leap over empty space. Hover a tile to see where it reaches.", "rows": [". . v . <", "> . . . ^", "^ < < . .", ". ^ < . <"]}, {"name": "Split", "hint": "Split tiles send the ring both ways.", "rows": [". S| . . .", ". . . . .", "S- S| . S- v", "S| S- ^ v S-"]}, {"name": "Branches", "hint": "Almost every tile nearly works. Find the one that does.", "rows": ["> . S| . S-", "S- . v . .", "S| < < . .", "S- v . . .", "S- S- . . ^"]}, {"name": "Delay", "hint": "Hourglass tiles wait an extra beat.", "rows": ["> Dv v D< <", ". . . . .", "D^ . D> Dv .", "D^ . . < ."]}, {"name": "Hush", "hint": "Striped tiles stay silent until their second hit.", "rows": ["M> S- . S| .", "^ . . . .", ". . . . <", ". . . v .", "S| S- < S- ^"]}, {"name": "Chorus", "hint": "Splits, delays and silence, all together.", "rows": ["S- . . . . S-", "S| S- S- Dv S- S-", "S- . . . . S|", ". S| . . . <", "M> . S- S- S| S|", "S| S- D< . S- M<"]}, {"name": "Turn", "hint": "Tap the gold ↻ to rotate a tile before you play.", "rows": ["R< R< . > v", "R^ . . . S-", ". v . . .", ". > . . v", ". . . . ."]}, {"name": "Tuning", "hint": "Tune every dial, then strike once.", "rows": ["v . . . . R>", ". S- . . . Rv", ". ^ < < . .", ". . . ^ . .", "> . . R^ > <"]}, {"name": "Finale", "hint": "Everything you know, together.", "rows": ["S| . . R> . D<", ". . . . > S|", ". > . . S| <", ". ^ . > R< .", ". . . R< S- D<"]}]);
+const SCALE=[0,2,4,7,9,12,14,16,19,21,24,26,28];
+let AC=null,soundOn=true;
+let MASTER=null;
+function master(a){// master gain -> limiter so dense chains never clip
+ const g=a.createGain();g.gain.value=.7;const c=a.createDynamicsCompressor();c.threshold.value=-10;c.knee.value=6;c.ratio.value=12;c.attack.value=.003;c.release.value=.25;g.connect(c);c.connect(a.destination);return g}
+function ac(){if(!AC){AC=new (window.AudioContext||window.webkitAudioContext)();MASTER=master(AC)}if(AC.state==='suspended')AC.resume();return AC}
+function note(i,t=0,vol=.22,dur=1.4){if(!soundOn)return;const a=ac(),o=a.createOscillator(),o2=a.createOscillator(),g=a.createGain(),f=220*Math.pow(2,SCALE[i%SCALE.length]/12);
+ o.type='sine';o2.type='triangle';o.frequency.value=f;o2.frequency.value=f*2;const s=a.currentTime+t;
+ g.gain.setValueAtTime(0,s);g.gain.linearRampToValueAtTime(vol,s+.01);g.gain.exponentialRampToValueAtTime(.0001,s+dur);
+ const g2=a.createGain();g2.gain.value=.25;o.connect(g);o2.connect(g2);g2.connect(g);g.connect(MASTER);o.start(s);o2.start(s);o.stop(s+dur);o2.stop(s+dur)}
+function thud(){if(!soundOn)return;const a=ac(),o=a.createOscillator(),g=a.createGain();o.frequency.value=90;g.gain.setValueAtTime(.15,a.currentTime);g.gain.exponentialRampToValueAtTime(.001,a.currentTime+.2);o.connect(g);g.connect(MASTER);o.start();o.stop(a.currentTime+.2)}
+const ARROW={'>':0,'v':90,'<':180,'^':270};
+function svgFor(c){const k=kind(c);const sw='stroke="#cfc8ff" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"';
+ if(k==='split'){const r=c.t==='S|'?90:0;return `<svg viewBox="0 0 24 24" ${sw} style="transform:rotate(${r}deg)"><path d="M2 12h20M6 8l-4 4 4 4M18 8l4 4-4 4"/></svg>`}
+ const d=c.t[c.t.length-1];return `<svg viewBox="0 0 24 24" ${sw} style="transform:rotate(${ARROW[d]}deg)"><path d="M4 12h15M13 6l6 6-6 6"/></svg>`}
+let li=+(localStorage.resLvl||0),grid,history=[],busy=false,done=JSON.parse(localStorage.resDone||'[]');
+const B=document.getElementById('board');
+function trim(g){while(g.length&&g[g.length-1].every(c=>!c))g.pop();while(g.length&&g[0].every(c=>!c))g.shift();const W=g[0].length;let a=0,b=W-1;while(g.every(r=>!r[a]))a++;while(g.every(r=>!r[b]))b--;return g.map(r=>r.slice(a,b+1))}
+function load(i){li=i;localStorage.resLvl=i;grid=trim(parse(LEVELS[i]));history=[];busy=false;render();
+ document.getElementById('lvl').textContent=`${i+1} / ${LEVELS.length} · ${LEVELS[i].name.toUpperCase()}`;
+ document.getElementById('hint').textContent=LEVELS[i].hint;
+ document.getElementById('dots').innerHTML=LEVELS.map((_,j)=>`<i class="${done.includes(j)?'done':''} ${j===i?'cur':''}" data-j="${j}"></i>`).join('');
+ document.querySelectorAll('#dots i').forEach(e=>e.onclick=()=>{if(!busy)load(+e.dataset.j)})}
+function render(){const H=grid.length,W=grid[0].length;const s=Math.min(78,Math.floor((Math.min(innerWidth,560)-40)/W)-10,Math.floor((innerHeight-260)/H)-10);
+ B.style.setProperty('--s',s+'px');B.style.gridTemplateColumns=`repeat(${W},${s}px)`;B.innerHTML='';
+ grid.forEach((r,y)=>r.forEach((c,x)=>{const d=document.createElement('div');d.className='cell';d.id=`c${x}_${y}`;
+  if(c){const k=kind(c);d.className+=' tile'+(k==='split'||k==='arrow'?'':' '+(k==='rot'?'rotable':k));d.innerHTML=(k==='delay'?HG:'')+svgFor(c)+(k==='delay'?'<span class="badge" style="color:#ffb02e">+1</span>':'')+(k==='mute'?'<span class="badge" style="background:#05040c;padding:0 3px;border-radius:4px">×2</span>':'');
+   d.style.setProperty('--h',(y*47+x*83)%360);
+   if(k==='rot'){const b=document.createElement('div');b.className='rot';b.textContent='↻';b.title='Rotate clockwise (right-click / long-press tile: counter-clockwise)';b.onclick=e=>{e.stopPropagation();turn(x,y,1)};d.appendChild(b);
+    d.oncontextmenu=e=>{e.preventDefault();clearTimeout(LP);if(!longFired)turn(x,y,3)};
+    d.onpointerdown=e=>{longFired=false;if(e.button)return;clearTimeout(LP);LP=setTimeout(()=>{LP=null;longFired=true;turn(x,y,3)},450)};d.onpointerup=d.onpointerleave=()=>{clearTimeout(LP)}}
+   else d.oncontextmenu=e=>e.preventDefault();
+   d.onclick=()=>{if(longFired){longFired=false;return}play(x,y)};d.onmouseenter=()=>preview(x,y);d.onmouseleave=clearPreview}
+  B.appendChild(d)}))}
+let LP=null,longFired=false;
+const HG='<svg class="hg" viewBox="0 0 24 24" fill="#ffb02e"><path d="M6 2h12v2c0 4-4 6-4 8s4 4 4 8v2H6v-2c0-4 4-6 4-8S6 8 6 4z"/></svg>';
+// k=1 clockwise, k=3 counter-clockwise; history stores the step so undo inverts it
+function turn(x,y,k){if(busy)return;const c=grid[y][x];for(let i=0;i<k;i++)rotate(c);history.push([x,y,k]);thud();render();preview(x,y)}
+function clearPreview(){document.querySelectorAll('.ghost').forEach(e=>e.classList.remove('ghost'))}
+function preview(x,y){if(busy)return;clearPreview();const c=grid[y][x];if(!c)return;
+ // show only the tiles this tile directly reaches next: teaches without solving
+ const DIRS={'>':[1,0],'<':[-1,0],'^':[0,-1],'v':[0,1]};const ds=c.t==='S-'?['<','>']:c.t==='S|'?['^','v']:[c.t[c.t.length-1]];
+ ds.forEach(d=>{let [dx,dy]=DIRS[d],a=x+dx,b=y+dy;while(grid[b]&&a>=0&&a<grid[0].length&&!grid[b][a]){a+=dx;b+=dy}if(grid[b]&&grid[b][a])document.getElementById(`c${a}_${b}`).classList.add('ghost')})}
+function wave(el){const w=document.createElement('div');w.className='wave';w.style.left='50%';w.style.top='50%';w.style.setProperty('--h',el.style.getPropertyValue('--h'));el.appendChild(w);setTimeout(()=>w.remove(),900)}
+function play(x,y){if(busy)return;busy=true;clearPreview();ac();const {ev,solved}=simulate(grid,x,y);const BEAT=180;let n=0;
+ ev.forEach(e=>setTimeout(()=>{const el=document.getElementById(`c${e.x}_${e.y}`);if(e.muted){el.classList.add('muted-hit');thud();return}
+  document.querySelectorAll('.rung:not(.past)').forEach(t=>{if(+t.dataset.beat<e.beat)t.classList.add('past')});el.dataset.beat=e.beat;el.classList.add('rung');const bn=document.createElement('span');bn.className='beatno';bn.textContent=e.beat+1;el.appendChild(bn);wave(el);note(n++);if(navigator.vibrate)navigator.vibrate(12)},e.beat*BEAT));
+ const end=(ev.length?ev[ev.length-1].beat:0)*BEAT+500;
+ setTimeout(()=>{if(solved)win();else{document.querySelectorAll('.rung').forEach(e=>{e.style.transition='background 1s';e.classList.remove('rung','past')});setTimeout(()=>{busy=false;render()},700)}},end)}
+function win(){[0,4,7,12].forEach((s,i)=>{if(soundOn){note([0,2,3,5][i],i*.06,.18,2.4)}});
+ const f=document.getElementById('flash');f.style.opacity=1;setTimeout(()=>f.style.opacity=0,500);
+ document.querySelectorAll('.tile').forEach((t,i)=>setTimeout(()=>{t.animate([{transform:'scale(1)'},{transform:'scale(1.05)'},{transform:'scale(1)'}],{duration:400});wave(t)},i*40));
+ if(!done.includes(li)){done.push(li);localStorage.resDone=JSON.stringify(done)}
+ setTimeout(()=>{const w=document.getElementById('win');w.style.display='flex';document.getElementById('next').textContent=li<LEVELS.length-1?'Next ›':'Play again'},1100)}
+document.getElementById('next').onclick=()=>{document.getElementById('win').style.display='none';load(li<LEVELS.length-1?li+1:0)};
+document.getElementById('restart').onclick=()=>{if(!busy)load(li)};
+document.getElementById('undo').onclick=()=>{if(busy||!history.length)return;const [x,y,k]=history.pop();for(let i=0;i<4-k;i++)rotate(grid[y][x]);render()};
+document.getElementById('sound').onclick=e=>{soundOn=!soundOn;e.target.textContent=soundOn?'🔊':'🔇'};
+addEventListener('keydown',e=>{if(e.key==='r')document.getElementById('restart').click();if(e.key==='z')document.getElementById('undo').click()});
+addEventListener('resize',()=>{if(!busy)render()});
+load(Math.min(li,LEVELS.length-1));
+</script></body></html>
