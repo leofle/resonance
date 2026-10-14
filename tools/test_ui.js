@@ -40,16 +40,39 @@ const FIND=`(want)=>{const P=[];grid.forEach((r,y)=>r.forEach((c,x)=>{if(c&&kind
    const tileTxt=[...document.querySelectorAll('.tile')].map(t=>{const c=t.cloneNode(true);c.querySelectorAll('.dl,.badge').forEach(e=>e.remove());return c.textContent}).join('');
    const cols=[...st.querySelectorAll('.col')].map(c=>[...c.querySelectorAll('i')].map(b=>{const r=b.getBoundingClientRect();return{w:r.width,h:r.height,l:r.left,r:r.right}}));
    return{strip:st.textContent,tileTxt,dp:document.querySelectorAll('[data-p]').length,pb:document.querySelectorAll('.pb').length,cols,H:st.getBoundingClientRect().height,
-    want:LEVELS[li].melody.map(ch=>ch.map(p=>PH(p)))}});
-  const sepOK=r.cols.every(c=>c.every((b,k)=>k===0||b.l>=c[k-1].r+2)&&c.every(b=>b.w>=10));
+    want:LEVELS[li].melody.map(ch=>ch.length?[PH(Math.max(...ch))]:[])}});
+  const sepOK=r.cols.every((c,j)=>c.length===r.want[j].length&&c.every(b=>b.w>=10));
   const hOK=r.cols.every((c,j)=>c.every((b,k)=>Math.abs(b.h-r.want[j][k]/100*(r.H-20))<2.5));
-  ok(!/\d/.test(r.strip)&&!/\d/.test(r.tileTxt)&&r.dp===0&&r.pb===0&&sepOK&&hOK&&r.H>=115,`L${i+1}: no digits on strip/tiles, no pitch shown before ringing, bars height=pitch, chord bars side by side (strip ${r.H}px)`)}
+  ok(!/\d/.test(r.strip)&&!/\d/.test(r.tileTxt)&&r.dp===0&&r.pb===0&&sepOK&&hOK&&r.H>=115,`L${i+1}: no digits on strip/tiles, no pitch shown before ringing, bars height=pitch, one bar per beat = top note (strip ${r.H}px)`)}
  // v2.7: no pitch colours anywhere: strip bars, tile bars, rung tiles and waves share one colour; pitch = height only
  {await go(4);const s0=(await find('win'))[0];await p.evaluate(s=>{s.P.forEach(([x,y],i)=>{for(let k=0;k<s.ks[i];k++)rotate(grid[y][x])});render()},s0);await p.click(`#c${s0.x}_${s0.y}`);await p.click('#play');await p.waitForTimeout(700);
   const col=await p.evaluate(()=>{const st=document.createElement('style');st.textContent='*{transition:none!important;animation:none!important}';document.head.appendChild(st);document.body.offsetWidth;const cs=e=>getComputedStyle(e).backgroundColor;const sb=[...document.querySelectorAll('#strip .col i')].map(cs),pb=[...document.querySelectorAll('.pb')].map(cs),byKind=sel=>{const m={};document.querySelectorAll(sel).forEach(e=>{const k=e.className.replace(/\b(sel|pv|ghost|silent|muted-hit)\b/g,'').trim();(m[k]=m[k]||[]).push(cs(e))});return Object.values(m)},rg=byKind('.tile.rung:not(.past)'),ps=byKind('.tile.rung.past'),wv=[...document.querySelectorAll('.wave')].map(e=>getComputedStyle(e).borderTopColor);
    const one=a=>new Set(a).size<=1;st.remove();return{ok:one(sb)&&one(pb)&&rg.every(one)&&ps.every(one)&&one(wv),n:[sb.length,pb.length,rg.flat().length,ps.flat().length,wv.length],pitches:new Set(LEVELS[li].melody.flat()).size}});
   ok(col.ok&&col.n[0]>3&&col.n[1]>=1&&col.pitches>2,`one neutral colour for strip bars, tile bars, rung/past tiles and waves (${col.n.join('/')} elements, ${col.pitches} pitches)`);
   await p.waitForFunction(()=>!busy||document.getElementById('win').style.display==='flex',null,{timeout:10000});await p.evaluate(()=>{document.getElementById('win').style.display='none'})}
+
+ // the target's notes-per-beat never leaks: strip DOM, aria/title text, fail summary
+ for(let i=2;i<10;i++){await go(i);const r=await p.evaluate(()=>{const st=document.getElementById('strip');const m=LEVELS[li].melody;
+   const perCol=[...st.querySelectorAll('.col')].map(c=>c.children.length);const attrs=[...document.querySelectorAll('*')].flatMap(e=>[...e.attributes].map(a=>a.name+'='+a.value)).join('\n');
+   const shape=m.map(c=>c.length).join(',');
+   return{perCol,ok1:perCol.every((n,j)=>n===(m[j].length?1:0)),noShape:!attrs.includes(shape)&&!/chord|notes?[- ]per|data-n/i.test(st.outerHTML),chords:m.some(c=>c.length>1)}});
+  ok(r.ok1&&r.noShape,`L${i+1}: strip/DOM/aria expose no notes-per-beat (one bar per beat${r.chords?', level has chords':''})`)}
+ {await go(5);const s0=await p.evaluate(()=>[...document.querySelectorAll('.tile:not(.rotable)')][0].id);
+  if(s0){await p.waitForTimeout(2300);await p.click('#'+s0);await p.click('#play');await p.waitForFunction(()=>document.getElementById('msg').textContent.length>0,null,{timeout:10000});
+   const t=await p.evaluate(()=>document.getElementById('msg').textContent);
+   ok(/^\d+ of \d+ beats right( · \d+ tiles? silent)?$/.test(t),`failed-Play summary only says beats right / silent tiles: "${t}"`);
+   await p.waitForFunction(()=>!busy,null,{timeout:8000});ok(await p.evaluate(()=>document.querySelectorAll('.pb,.beatno').length===0),'no pitch bar left on the last tile after a failed Play')}}
+ {await go(0);const w=(await find('win'))[0];await p.click(`#c${w.x}_${w.y}`);await p.click('#play');
+  await p.waitForFunction(()=>document.getElementById('win').style.display==='flex',null,{timeout:10000});
+  const st=await p.evaluate(()=>({pb:document.querySelectorAll('.pb,.beatno').length,txt:document.getElementById('play').textContent,busy}));
+  ok(st.pb===0&&st.txt!=='Playing…'&&!st.busy,`after a win: no pitch bar left and Play resets (${st.txt})`);await p.evaluate(()=>{document.getElementById('win').style.display='none'})}
+ {await go(1);await p.waitForTimeout(2300);const id=await p.evaluate(()=>[...document.querySelectorAll('.tile:not(.rotable)')][0].id);await p.click('#'+id);await p.waitForTimeout(150);
+  ok(await p.evaluate(()=>document.querySelectorAll('.pb').length===0),'preview adds no pitch bar')}
+ {const r=await p.evaluate(()=>LEVELS.map((L,i)=>{load(i);document.getElementById('help').click();const t=document.getElementById('hintpop');const v=!t.hidden&&t.textContent.includes(L.hint.slice(0,20));hideHint();return v}));
+  ok(r.every(Boolean),`every level's hint opens via ? (${r.map(b=>b?1:0).join('')})`)}
+ {await p.evaluate(()=>{localStorage[KEY+'Hints']='[]'});const r=[];for(let i=0;i<10;i++){await p.evaluate(i=>load(i),i);r.push(await p.evaluate(()=>!document.getElementById('hintpop').hidden));}
+  const exp=await p.evaluate(()=>LEVELS.map((_,i)=>HINT_AUTO.includes(i)));ok(r.every((v,i)=>v===exp[i]),`hint auto-opens exactly on new-mechanic levels (${r.map(b=>b?1:0).join('')})`);
+  await p.evaluate(()=>{localStorage[KEY+'Hints']='[0,1,2,3,4,5,6,7,8,9]';hideHint()})}
  // pitch bars flash only while a tile rings and clear as the chain moves on; nothing persists after a Play
  await go(0);const sol1=(await find('win'))[0];const wrong1=await p.evaluate(s=>{for(let y=0;y<N;y++)for(let x=0;x<N;x++)if(grid[y][x]&&!(x===s.x&&y===s.y))return{x,y}},sol1);
  await p.click(`#c${wrong1.x}_${wrong1.y}`);await p.click('#play');await p.waitForTimeout(220);

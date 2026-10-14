@@ -225,7 +225,8 @@ function load(i){clearTimers();sel=null;previewsLeft=PREVIEW_LIMIT;li=i;localSto
  document.querySelectorAll('#dots .dot').forEach(e=>e.onclick=()=>{document.getElementById('win').style.display='none';load(+e.dataset.j)});
  if(audioReady())later(listen,350);else soundUI()}   // auto-play the tune only once sound is unlocked; never creates the context
 // melody strip: one column per beat, one bar per note (bar height + colour = pitch; chord notes side by side). No digits.
-function strip(){const m=LEVELS[li].melody;TR.innerHTML=m.map((ch,i)=>`<div class="col" id="b${i}">${ch.map(p=>`<i style="height:${PH(p)}%"></i>`).join('')}</div>`).join('')}
+// one bar per beat = the top note of that beat's chord (the strip never shows how many notes sound on a beat; Listen still plays full chords)
+function strip(){const m=LEVELS[li].melody;TR.innerHTML=m.map((ch,i)=>`<div class="col" id="b${i}">${ch.length?`<i style="height:${PH(Math.max(...ch))}%"></i>`:''}</div>`).join('')}
 let LT=[];   // Listen highlight timers: cancelled (and the highlight cleared) when a chain starts or the level reloads
 function listen(){if(busy)return;unlock();LT.forEach(clearTimeout);LT=[];clearStrip();playMelody(LEVELS[li].melody);const cols=[...document.querySelectorAll('#strip .col')];
  cols.forEach((c,i)=>LT.push(later(()=>{clearStrip();c.classList.add('hl');follow(i)},i*BEAT)));LT.push(later(clearStrip,cols.length*BEAT));LT.push(later(()=>setTrack(0),cols.length*BEAT+400))}
@@ -305,10 +306,11 @@ function fail(r){const rung=new Set(r.ev.filter(e=>!e.muted).map(e=>e.x+','+e.y)
 // back to the idle look in place (pitch bars of this attempt stay until the next attempt / Restart / rotate)
 function resetTiles(){setTrack(0);document.querySelectorAll('.tile').forEach(e=>{e.classList.remove('rung','past','silent','muted-hit');e.style.transition='';e.querySelectorAll('.beatno,.pb').forEach(b=>b.remove())})}
 function win(){if(soundOn)[0,2,4,5].forEach((p,i)=>note(p,i*.06,.18,2.4));
+ document.querySelectorAll('.pb,.beatno').forEach(e=>e.remove());   // the last tile's bar clears on the win too
  const f=document.getElementById('flash');f.style.opacity=1;later(()=>f.style.opacity=0,500);
  document.querySelectorAll('.tile').forEach((t,i)=>later(()=>{t.animate([{transform:'scale(1)'},{transform:'scale(1.05)'},{transform:'scale(1)'}],{duration:400});wave(t)},i*40));
  if(!done.includes(li)){done.push(li);localStorage[KEY+'Done']=JSON.stringify(done)}
- later(()=>{const w=document.getElementById('win');w.style.display='flex';document.getElementById('next').textContent=li<LEVELS.length-1?'Next ›':'Play again'},1100)}
+ later(()=>{const w=document.getElementById('win');w.style.display='flex';document.getElementById('next').textContent=li<LEVELS.length-1?'Next ›':'Play again';busy=false;resetTiles();playUI()},1100)}
 document.getElementById('next').onclick=()=>{document.getElementById('win').style.display='none';load(li<LEVELS.length-1?li+1:0)};
 document.getElementById('restart').onclick=()=>load(li);   // allowed any time: cancels a running chain
 document.getElementById('play').onclick=playSel;document.getElementById('play').onpointerdown=e=>{if(!busy&&sel){e.preventDefault();playSel()}};
