@@ -7,7 +7,7 @@
 // (skipping empties), arriving one beat later (two for delay). Each tile rings once.
 // Mute tiles ring only when TWO OR MORE rings arrive on the SAME beat; a lone ring is absorbed.
 // Melody of a chain = for each beat 0..last, the sorted pitches of tiles that ring on that beat.
-// Level is won when every tile rings AND each beat's top note equals the target's top note (rests must match).
+// v2.12: level is won when each beat's top note equals the target's top note (rests must match).
 const N=6;
 const SCALE=[0,2,4,7,9,12];                 // semitones above BASE_HZ (major pentatonic, 6 levels: one octave + top tonic)
 const BASE_HZ=220;
@@ -42,5 +42,7 @@ const chordEq=(a,b)=>!!a&&!!b&&topOf(a)===topOf(b);
 const melodyEq=(a,b)=>a.length===b.length&&a.every((c,i)=>chordEq(c,b[i]));
 // first beat index where played melody diverges from target (-1 if equal)
 function firstWrongBeat(m,t){const L=Math.max(m.length,t.length);for(let i=0;i<L;i++)if(!chordEq(m[i]||[],t[i]||[]))return i;return -1}
+// v2.12 win rule: the tune is right (every beat's top note + rests match); silent tiles are allowed
+const won=(r,t)=>melodyEq(r.melody,t);
 const freq=p=>BASE_HZ*Math.pow(2,SCALE[p]/12);
-if(typeof module!=='undefined')module.exports={topOf,fullChordEq,N,SCALE,BASE_HZ,LEVELS,parse,simulate,kind,rotate,targets,melodyOf,chordEq,melodyEq,firstWrongBeat,freq};
+if(typeof module!=='undefined')module.exports={won,topOf,fullChordEq,N,SCALE,BASE_HZ,LEVELS,parse,simulate,kind,rotate,targets,melodyOf,chordEq,melodyEq,firstWrongBeat,freq};

@@ -5,8 +5,8 @@ function configs(lv,fn){const base=E.parse(lv);const pos=[];base.forEach((r,y)=>
   pos.forEach(([x,y])=>{const k=mm%4;mm=Math.floor(mm/4);for(let i=0;i<k;i++)E.rotate(g[y][x]);if(k)rs.push(`(${x+1},${y+1}) CW×${k}→${g[y][x].t[1]}`)});
   for(let y=0;y<g.length;y++)for(let x=0;x<g[0].length;x++)if(g[y][x]&&E.kind(g[y][x])!=="rot")fn(g,x,y,rs)}}   // dials can never start a chain
 function solve(lv){let trials=0;const cover=[],match=[];const tiles=E.parse(lv).flat().filter(Boolean).length;
- configs(lv,(g,x,y,rs)=>{trials++;const r=E.simulate(g,x,y);if(!r.solved)return;const d=`tap (${x+1},${y+1})`+(rs.length?' after '+rs.join(' '):'');
-  cover.push({d,melody:r.melody});if(lv.melody&&E.melodyEq(r.melody,lv.melody))match.push(d)});
+ configs(lv,(g,x,y,rs)=>{trials++;const r=E.simulate(g,x,y);const d=`tap (${x+1},${y+1})`+(rs.length?' after '+rs.join(' '):'');
+  if(r.solved)cover.push({d,melody:r.melody});if(lv.melody&&E.won(r,lv.melody))match.push(d)});   // v2.12: win = tune right (tiles may stay silent)
  return{tiles,trials,cover,match}}
 module.exports={solve,configs};
 if(require.main===module)E.LEVELS.forEach((lv,i)=>{const r=solve(lv);

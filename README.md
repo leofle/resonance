@@ -67,3 +67,10 @@ node tools/test_sound.js      # audio unlock in Chrome + WebKit (desktop and iPh
 - Hints for 8–10 explain ↔/↕ splits and that the striped (chorus/mute) tile sounds only when two branches arrive on the same beat.
 - Play right after a failed chain works on the first click (the ~2 s fail tail used to keep the board busy).
 - Progress key bumped to `res211`.
+
+## v2.12
+- Win rule: a level clears when the tune is right (every beat's top note + rests); tiles may stay silent. L5/L9/L10 re-pitched (one tile each, `tools/repitch12.js`) so each still has exactly one winning setup (`tools/check_levels.js`).
+- Lives: 3 per level (reset on level load). Only a ▶ Play that does not win costs a life; repeating the exact same failed setup replays for free. At 0 lives the board locks; "Restart level" restores 3 lives with freshly shuffled dials.
+- Points: clear = 100 + 50 per life left (250/200/150/100). Best per level kept; header-total = sum of bests. Save key res212.
+- Tap fixes: a tap during a sounding chain is applied when it ends; ▶ Play is never `disabled` (it swallowed clicks), with nothing selected it explains instead.
+- Tests: `tools/test_lives.js` (Chromium + WebKit touch).
