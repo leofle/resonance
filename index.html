@@ -56,7 +56,7 @@ button:hover{background:#ffffff22}
 #dots i.done{background:#8ef0ff}#dots i.cur{outline:2px solid #fff}
 </style></head><body>
 <header><h1>RESONANCE</h1><div id="lvl"></div><div id="dots"></div></header>
-<div id="hint"></div><div id="msg"></div>
+<div id="hint"></div><div id="msg" aria-live="polite" aria-hidden="true"></div>
 <div id="board"></div>
 <div id="bar"><button id="undo">↶ Undo</button><button id="restart">⟲ Restart</button><button id="sound">🔊</button></div>
 <div id="flash"></div>
@@ -156,8 +156,8 @@ function play(x,y){if(busy)return;busy=true;clearPreview();ac();const {ev,solved
 // failed chain: pulse the tiles that never rang + "N tiles silent" for ~1.2s, then reset
 function fail(ev){const rung=new Set(ev.filter(e=>!e.muted).map(e=>e.x+','+e.y));let n=0;
  grid.forEach((r,y)=>r.forEach((c,x)=>{if(c&&!rung.has(x+','+y)){n++;document.getElementById(`c${x}_${y}`).classList.add('silent')}}));
- const m=document.getElementById('msg');m.textContent=`${n} tile${n===1?'':'s'} silent`;m.classList.add('show');
- setTimeout(()=>{m.classList.remove('show');document.querySelectorAll('.rung').forEach(e=>{e.style.transition='background 1s';e.classList.remove('rung','past')});setTimeout(()=>{busy=false;render()},700)},1200)}
+ const m=document.getElementById('msg');m.textContent=`${n} tile${n===1?'':'s'} silent`;m.classList.add('show');m.removeAttribute('aria-hidden');
+ setTimeout(()=>{m.classList.remove('show');m.textContent='';m.setAttribute('aria-hidden','true');document.querySelectorAll('.rung').forEach(e=>{e.style.transition='background 1s';e.classList.remove('rung','past')});setTimeout(()=>{busy=false;render()},700)},1200)}
 function win(){[0,4,7,12].forEach((s,i)=>{if(soundOn){note([0,2,3,5][i],i*.06,.18,2.4)}});
  const f=document.getElementById('flash');f.style.opacity=1;setTimeout(()=>f.style.opacity=0,500);
  document.querySelectorAll('.tile').forEach((t,i)=>setTimeout(()=>{t.animate([{transform:'scale(1)'},{transform:'scale(1.05)'},{transform:'scale(1)'}],{duration:400});wave(t)},i*40));
