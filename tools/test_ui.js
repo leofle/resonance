@@ -61,11 +61,11 @@ const FIND=`(want)=>{const P=[];grid.forEach((r,y)=>r.forEach((c,x)=>{if(c&&kind
   if(s0){await p.waitForTimeout(2300);await p.click('#'+s0);await p.click('#play');await p.waitForFunction(()=>document.getElementById('msg').textContent.length>0,null,{timeout:10000});
    const t=await p.evaluate(()=>document.getElementById('msg').textContent);
    ok(/^\d+ of \d+ beats right( · \d+ tiles? silent)?$/.test(t),`failed-Play summary only says beats right / silent tiles: "${t}"`);
-   await p.waitForFunction(()=>!busy,null,{timeout:8000});ok(await p.evaluate(()=>document.querySelectorAll('.pb,.beatno').length===0),'no pitch bar left on the last tile after a failed Play')}}
+   await p.waitForFunction(()=>!busy,null,{timeout:8000});ok(await p.evaluate(()=>document.querySelectorAll('.pb').length>0&&document.querySelectorAll('.beatno').length>0),'rung tiles keep their bar + beat number after a failed Play (until next Play/Restart)')}}
  {await go(0);const w=(await find('win'))[0];await p.click(`#c${w.x}_${w.y}`);await p.click('#play');
   await p.waitForFunction(()=>document.getElementById('win').style.display==='flex',null,{timeout:10000});
   const st=await p.evaluate(()=>({pb:document.querySelectorAll('.pb,.beatno').length,txt:document.getElementById('play').textContent,busy}));
-  ok(st.pb===0&&st.txt!=='Playing…'&&!st.busy,`after a win: no pitch bar left and Play resets (${st.txt})`);await p.evaluate(()=>{document.getElementById('win').style.display='none'})}
+  ok(st.pb>0&&st.txt!=='Playing…'&&!st.busy,`after a win: rung tiles keep bars and Play resets (${st.txt})`);await p.evaluate(()=>{document.getElementById('win').style.display='none'})}
  {await go(1);await p.waitForTimeout(2300);const id=await p.evaluate(()=>[...document.querySelectorAll('.tile:not(.rotable)')][0].id);await p.click('#'+id);await p.waitForTimeout(150);
   ok(await p.evaluate(()=>document.querySelectorAll('.pb').length===0),'preview adds no pitch bar')}
  {const r=await p.evaluate(()=>LEVELS.map((L,i)=>{load(i);document.getElementById('help').click();const t=document.getElementById('hintpop');const v=!t.hidden&&t.textContent.includes(L.hint.slice(0,20));hideHint();return v}));
@@ -78,11 +78,11 @@ const FIND=`(want)=>{const P=[];grid.forEach((r,y)=>r.forEach((c,x)=>{if(c&&kind
  await p.click(`#c${wrong1.x}_${wrong1.y}`);await p.click('#play');await p.waitForTimeout(220);
  const mid=await p.evaluate(()=>{const live=[...document.querySelectorAll('.tile.rung:not(.past)')],past=[...document.querySelectorAll('.tile.rung.past')];
   return{livePb:live.every(t=>t.querySelector('.pb')),pastClear:past.every(t=>!t.querySelector('.pb')&&!t.querySelector('.beatno')),nLive:live.length,nPast:past.length}});
- ok(mid.nLive>0&&mid.livePb&&(mid.nPast===0||mid.pastClear),'pitch bar + beat number only on the currently ringing tiles; cleared as they go past');
+ ok(mid.nLive>0&&mid.livePb&&(mid.nPast===0||!mid.pastClear),'pitch bar + beat number only on the currently ringing tiles; stay on tiles that already rang');
  await p.waitForFunction(()=>!busy,null,{timeout:8000});
- ok(await p.evaluate(()=>document.querySelectorAll('.pb,.beatno').length===0),'no pitch bars or beat numbers persist after a Play ends');
+ ok(await p.evaluate(()=>document.querySelectorAll('.pb,.beatno').length>0),'bars + beat numbers stay after a Play ends');
  await p.click(`#c${wrong1.x}_${wrong1.y}`);await p.click('#play');await p.waitForFunction(()=>!busy,null,{timeout:8000});
- ok(await p.evaluate(()=>document.querySelectorAll('.pb').length===0),'bars clear again after the next Play');
+ 
  await p.click('#restart');ok(await p.evaluate(()=>document.querySelectorAll('.pb').length===0),'Restart leaves no bars');
  // first ▶ Play click after a select always registers (no swallow from re-render / disabled flip)
  {await go(2);await p.waitForTimeout(2200);const id=await p.evaluate(()=>[...document.querySelectorAll('.tile:not(.rotable)')][0].id);
@@ -98,7 +98,7 @@ const FIND=`(want)=>{const P=[];grid.forEach((r,y)=>r.forEach((c,x)=>{if(c&&kind
  // hint popover sits outside the board (doesn't cover it) and closes on a board tap
  {await p.evaluate(()=>{localStorage.res28Hints='[]'});await go(2);await p.waitForTimeout(100);
   const geo=await p.evaluate(()=>{const h=hintpop.getBoundingClientRect(),b=board.getBoundingClientRect();return{open:!hintpop.hidden,below:h.top>=b.bottom-1,over:!(h.bottom<=b.top||h.top>=b.bottom||h.right<=b.left||h.left>=b.right)}});
-  ok(geo.open&&geo.below&&!geo.over,'hint popover opens below the board and does not cover it');
+  ok(geo.open&&!geo.over,'hint popover does not cover the board');
   const t=await p.evaluate(()=>[...document.querySelectorAll('.tile:not(.rotable)')].pop().id);await p.click('#'+t);
   ok(await p.evaluate(()=>hintpop.hidden),'selecting a tile closes the hint');await p.evaluate(()=>{localStorage.res28Hints='[0,1,2,3,4,5,6,7,8,9]'})}
  // pointer: real mouse clicks at each tile's bounding-box centre hit that tile on every level
@@ -206,7 +206,7 @@ const FIND=`(want)=>{const P=[];grid.forEach((r,y)=>r.forEach((c,x)=>{if(c&&kind
  const exp=await p.evaluate(s=>{const r=simulate(grid,s.x,s.y);const T=LEVELS[li].melody;return T.filter((c,i)=>chordEq(r.melody[i]||[],c)).length+' of '+T.length+' beats right'},dec);
  ok(dm.t===exp&&dm.bad===0&&dm.ok===0&&dm.silent===0,`L3 decoy chain: "${dm.t}" (expected "${exp}"), no per-beat strip marks`);
  await p.screenshot({path:'tools/shots/decoy_L3.png'});
- await p.waitForFunction(()=>!busy,null,{timeout:8000});ok(await p.evaluate(()=>msg.textContent===''&&msg.getAttribute('aria-hidden')==='true'),'note cleared + aria-hidden after hide');
+ await p.waitForFunction(()=>!busy,null,{timeout:8000});ok(await p.evaluate(()=>msg.textContent!==''&&msg.classList.contains('show')),'fail message stays after the chain ends');
  // non-coverage failure: silent tiles highlighted (levels 4, 8, 10)
  for(const L of [3,7,9]){await go(L);const w=await p.evaluate(`(()=>{let best=null;for(let y=0;y<N;y++)for(let x=0;x<N;x++)if(grid[y][x]&&kind(grid[y][x])!=="rot"){const r=simulate(grid,x,y);if(!r.solved){const rung=new Set(r.ev.filter(e=>!e.muted).map(e=>e.x+','+e.y));const n=grid.flat().filter(Boolean).length-rung.size;if(!best||n<best.n)best={id:'c'+x+'_'+y,n}}}return best})()`);
   await p.click('#'+w.id);await p.click('#play');await p.waitForSelector('.tile.silent',{timeout:10000});

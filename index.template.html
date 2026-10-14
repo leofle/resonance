@@ -9,7 +9,7 @@ header{margin-top:10px;text-align:center;position:relative;z-index:10}
 h1{margin:0;font-weight:300;letter-spacing:.4em;font-size:16px}
 #lvl{opacity:.6;font-size:11px;letter-spacing:.2em;margin-top:3px}
 #stage{position:relative}
-#hintpop{margin:10px 0 0;padding:12px 14px;border-radius:14px;background:#1d1938f2;color:#f4f2ff;font-size:15px;line-height:1.35;box-shadow:0 8px 30px #000b,inset 0 0 0 1px #8ef0ff66;cursor:pointer}
+#hintpop{position:fixed;left:50%;top:calc(8px + env(safe-area-inset-top));transform:translateX(-50%);width:min(92vw,520px);box-sizing:border-box;z-index:20;padding:12px 14px;border-radius:14px;background:#1d1938f2;color:#f4f2ff;font-size:15px;line-height:1.35;box-shadow:0 8px 30px #000b,inset 0 0 0 1px #8ef0ff66;cursor:pointer}
 #hintpop[hidden]{display:none}
 #hintpop small{display:block;margin-top:6px;opacity:.6;font-size:12px}
 #board{display:grid;gap:var(--gap,10px);position:relative;overflow:hidden;padding:12px;border-radius:22px;contain:paint;clip-path:inset(0 round 22px);background:#ffffff06;box-shadow:inset 0 0 0 1px #ffffff14}
@@ -168,12 +168,14 @@ function fitStrip(){S.style.width=B.offsetWidth+'px';TR.classList.remove('fill')
  S.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();listen()}})}
 // hint popover: auto-shown once per device on levels that introduce a mechanic; '?' reopens; tap or first move dismisses
 const HINT_AUTO=[0,1,2,3,5,6];   // basics, gaps, dial, split, mute, delay
+var undoRestart=null;
 const HP=document.getElementById('hintpop');
 function seenHints(){try{return JSON.parse(localStorage[KEY+'Hints']||'[]')}catch(e){return[]}}
 function showHint(){HP.innerHTML=`${LEVELS[li].hint}<small>Tap to close · ? to reopen</small>`;HP.hidden=false}
 function hideHint(){HP.hidden=true}
-HP.addEventListener('click',e=>{e.stopPropagation();hideHint()});
-function load(i){clearTimers();sel=null;previewsLeft=PREVIEW_LIMIT;li=i;localStorage[KEY+'Lvl']=i;grid=parse(LEVELS[i]);history=[];busy=false;LP&&clearTimeout(LP);LP=null;longFired=false;
+function hideMsg(){const m=document.getElementById('msg');m.classList.remove('show');m.textContent='';m.setAttribute('aria-hidden','true')}
+HP.addEventListener('pointerdown',e=>{e.stopPropagation();e.preventDefault()});HP.addEventListener('pointerup',e=>{e.stopPropagation();e.preventDefault();hideHint()});HP.addEventListener('touchend',e=>{e.stopPropagation();e.preventDefault();hideHint()},{passive:false});HP.addEventListener('click',e=>{e.stopPropagation();e.preventDefault();hideHint()});
+function load(i){clearTimers();undoRestart=null;sel=null;previewsLeft=PREVIEW_LIMIT;li=i;localStorage[KEY+'Lvl']=i;grid=parse(LEVELS[i]);history=[];busy=false;LP&&clearTimeout(LP);LP=null;longFired=false;
  const m=document.getElementById('msg');m.classList.remove('show');m.textContent='';m.setAttribute('aria-hidden','true');
  render();strip();fitStrip();playUI();
  document.getElementById('lvl').textContent=`${i+1} / ${LEVELS.length} · ${LEVELS[i].name.toUpperCase()}`;
@@ -230,24 +232,25 @@ function moveSel(dx,dy){if(busy)return;const T=[];grid.forEach((r,y)=>r.forEach(
 const PH=p=>Math.round(14+p*(62/(SCALE.length-1)));   // bar height % for pitch p (strip and tiles share the scale)
 const pbar=p=>`<span class="pb" style="height:${(PH(p)*.8).toFixed(1)}%"></span>`;
 function reveal(el,x,y,p){el.querySelectorAll('.pb').forEach(e=>e.remove());el.insertAdjacentHTML('beforeend',pbar(p))}
-function hideBars(){document.querySelectorAll('.pb').forEach(e=>e.remove())}
+function hideBars(){document.querySelectorAll('.pb,.beatno').forEach(e=>e.remove())}
 // update one tile's arrow in place (no board rebuild, so a click that lands mid-update is never lost)
 function refreshTile(x,y){const el=document.getElementById(`c${x}_${y}`),o=el&&el.querySelector('svg:not(.hg)');if(o)o.outerHTML=svgFor(grid[y][x])}
 function clearStrip(){document.querySelectorAll('#strip .col.hl').forEach(c=>c.classList.remove('hl'))}
 const HG='<svg class="hg" viewBox="0 0 24 24" fill="#ffb02e"><path d="M6 2h12v2c0 4-4 6-4 8s4 4 4 8v2H6v-2c0-4 4-6 4-8S6 8 6 4z"/></svg>';
 // k=1 clockwise, k=3 counter-clockwise; history stores the step so undo inverts it
-function turn(x,y,k){clearTimeout(LP);if(busy)return;hideHint();const c=grid[y][x];for(let i=0;i<k;i++)rotate(c);history.push([x,y,k]);thud();hideBars();refreshTile(x,y);preview(x,y)}
+function turn(x,y,k){clearTimeout(LP);if(busy)return;undoRestart=null;hideHint();const c=grid[y][x];for(let i=0;i<k;i++)rotate(c);history.push([x,y,k]);thud();hideBars();refreshTile(x,y);preview(x,y)}
 function clearPreview(){document.querySelectorAll('.ghost').forEach(e=>e.classList.remove('ghost'))}
-function preview(x,y){if(busy)return;clearPreview();if(!grid[y][x])return;
+function preview(x,y){if(busy||li>=4)return;clearPreview();   // dial-target outline is a teaching aid: levels 1-4 only
+ if(!grid[y][x])return;
  targets(grid,x,y).forEach(([a,b])=>document.getElementById(`c${a}_${b}`).classList.add('ghost'))}
 function wave(el){const w=document.createElement('div');w.className='wave';w.style.left='50%';w.style.top='50%';el.appendChild(w);later(()=>w.remove(),900)}
-function play(x,y){if(busy||kind(grid[y][x])==='rot')return;hideHint();setTimeout(playUI);busy=true;clearPreview();ac();const r=simulate(grid,x,y),ev=r.ev,tgt=LEVELS[li].melody;
- LT.forEach(clearTimeout);LT=[];clearStrip();hideBars();
+function play(x,y){if(busy||kind(grid[y][x])==='rot')return;undoRestart=null;window.LASTPLAY={x,y};hideHint();setTimeout(playUI);busy=true;clearPreview();ac();const r=simulate(grid,x,y),ev=r.ev,tgt=LEVELS[li].melody;
+ LT.forEach(clearTimeout);LT=[];clearStrip();hideBars();hideMsg();
  const beats=Math.max(r.melody.length,tgt.length);
  for(let b=0;b<beats;b++){const here=ev.filter(e=>e.beat===b);
   later(()=>{follow(b);const good=chordEq(r.melody[b]||[],tgt[b]||[]);   // no visual per-beat mark: only the clash sound reveals which beat is wrong
    here.forEach(e=>{const el=document.getElementById(`c${e.x}_${e.y}`),c=grid[e.y][e.x];if(e.muted){el.classList.add('muted-hit');thud();return}
-    document.querySelectorAll('.rung:not(.past)').forEach(t=>{if(+t.dataset.beat<e.beat){t.classList.add('past');t.querySelectorAll('.pb,.beatno').forEach(n=>n.remove())}});el.dataset.beat=e.beat;el.classList.add('rung');reveal(el,e.x,e.y,c.p);
+    document.querySelectorAll('.rung:not(.past)').forEach(t=>{if(+t.dataset.beat<e.beat){t.classList.add('past')}});el.dataset.beat=e.beat;el.classList.add('rung');reveal(el,e.x,e.y,c.p);
     const bn=document.createElement('span');bn.className='beatno';bn.textContent=kind(c)==='delay'?`${e.beat+1}→${e.beat+2}`:e.beat+1;el.appendChild(bn);wave(el);note(c.p);if(!good)clash(c.p)});
    if(!good&&!here.some(e=>!e.muted))clash((tgt[b]||[0])[0]);   // a missing note is wrong too
    if(navigator.vibrate)navigator.vibrate(good?12:[30,20,30])},b*BEAT)}
@@ -258,21 +261,29 @@ function fail(r){const rung=new Set(r.ev.filter(e=>!e.muted).map(e=>e.x+','+e.y)
  grid.forEach((row,y)=>row.forEach((c,x)=>{if(c&&!rung.has(x+','+y)){n++;document.getElementById(`c${x}_${y}`).classList.add('silent')}}));
  const T=LEVELS[li].melody,right=T.filter((c,i)=>chordEq(r.melody[i]||[],c)).length;const parts=[`${right} of ${T.length} beats right`];if(n)parts.push(`${n} tile${n===1?'':'s'} silent`);
  const m=document.getElementById('msg');m.textContent=parts.join(' · ');m.classList.add('show');m.removeAttribute('aria-hidden');
- later(()=>{m.classList.remove('show');m.textContent='';m.setAttribute('aria-hidden','true');document.querySelectorAll('.rung').forEach(e=>{e.style.transition='background 1s';e.classList.remove('rung','past')});
+ later(()=>{document.querySelectorAll('.rung').forEach(e=>{e.style.transition='background 1s';e.classList.remove('rung','past')});
   later(()=>{busy=false;resetTiles();playUI()},700)},1200)}
 // back to the idle look in place (pitch bars of this attempt stay until the next attempt / Restart / rotate)
-function resetTiles(){setTrack(0);document.querySelectorAll('.tile').forEach(e=>{e.classList.remove('rung','past','silent','muted-hit');e.style.transition='';e.querySelectorAll('.beatno,.pb').forEach(b=>b.remove())})}
+function resetTiles(){setTrack(0);document.querySelectorAll('.tile').forEach(e=>{e.classList.remove('rung','past','silent','muted-hit');e.style.transition='';})}
 function win(){if(soundOn)[0,2,4,5].forEach((p,i)=>note(p,i*.06,.18,2.4));
- document.querySelectorAll('.pb,.beatno').forEach(e=>e.remove());   // the last tile's bar clears on the win too
  const f=document.getElementById('flash');f.style.opacity=1;later(()=>f.style.opacity=0,500);
  document.querySelectorAll('.tile').forEach((t,i)=>later(()=>{t.animate([{transform:'scale(1)'},{transform:'scale(1.05)'},{transform:'scale(1)'}],{duration:400});wave(t)},i*40));
  if(!done.includes(li)){done.push(li);localStorage[KEY+'Done']=JSON.stringify(done)}
  later(()=>{const w=document.getElementById('win');w.style.display='flex';document.getElementById('next').textContent=li<LEVELS.length-1?'Next ›':'Play again';busy=false;resetTiles();playUI()},1100)}
 document.getElementById('next').onclick=()=>{document.getElementById('win').style.display='none';load(li<LEVELS.length-1?li+1:0)};
-document.getElementById('restart').onclick=()=>load(li);   // allowed any time: cancels a running chain
+undoRestart=null;   // snapshot so ↶ Undo can reverse a Restart (dials, history, selection, last Play's bars + message)
+document.getElementById('restart').onclick=()=>{const m=document.getElementById('msg');
+ const snap={li,rows:grid.map(r=>r.map(c=>c&&c.t)),history:history.slice(),sel:sel&&{...sel},msg:m.textContent,
+  marks:[...document.querySelectorAll('.tile')].map(e=>[e.id,[...e.querySelectorAll('.pb,.beatno')].map(n=>n.outerHTML).join('')]).filter(a=>a[1])};
+ load(li);if(snap.history.length||snap.marks.length||snap.msg||snap.sel)undoRestart=snap};   // allowed any time: cancels a running chain
 document.getElementById('play').onclick=playSel;document.getElementById('play').onpointerdown=e=>{if(!busy&&sel){e.preventDefault();playSel()}};
 document.getElementById('help').onclick=()=>HP.hidden?showHint():hideHint();
-document.getElementById('undo').onclick=()=>{if(busy||!history.length)return;const [x,y,k]=history.pop();for(let i=0;i<4-k;i++)rotate(grid[y][x]);hideBars();refreshTile(x,y)};
+document.getElementById('undo').onclick=()=>{if(busy)return;
+ if(undoRestart&&!history.length&&undoRestart.li===li){const s=undoRestart;undoRestart=null;
+  grid.forEach((r,y)=>r.forEach((c,x)=>{if(c&&s.rows[y][x])c.t=s.rows[y][x]}));history=s.history;render();if(s.sel)setSel(s.sel.x,s.sel.y);
+  s.marks.forEach(([id,h])=>{const e=document.getElementById(id);if(e)e.insertAdjacentHTML('beforeend',h)});
+  if(s.msg){const m=document.getElementById('msg');m.textContent=s.msg;m.classList.add('show');m.removeAttribute('aria-hidden')}return}
+ if(!history.length)return;const [x,y,k]=history.pop();for(let i=0;i<4-k;i++)rotate(grid[y][x]);hideBars();refreshTile(x,y)};
 document.getElementById('sound').onclick=()=>{if(soundOn&&!audioReady()){unlock();return}soundOn=!soundOn;soundUI()};
 document.getElementById('unlock').onclick=()=>{unlock();soundOn=true;soundUI();setTimeout(()=>{if(!busy)listen()},60)};
 addEventListener('keydown',e=>{const tg=e.target;const onCtl=tg&&tg.closest&&tg.closest('button,#strip,[role=button]');
