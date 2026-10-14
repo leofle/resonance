@@ -53,3 +53,11 @@ node tools/test_sound.js      # audio unlock in Chrome + WebKit (desktop and iPh
 - Progress is stored under `res28*` (old progress is ignored).
 - `tools/naive.js` reports, per level, decoys whose top-note sequence matches the strip, and how many remain after one failed Play.
 - Tools: `gen10.js` (specs dial2/chorus4/tuning4/finale4), `gen11.js` (90°-symmetric, all-same-shape decoys), `scramble_dials.js` (MINWRONG=n), `repitch.js` (TOP=n, NOLB=1), `check_levels.js`.
+
+## v2.10 (eye-only playtest)
+- After a Play, every tile that rang keeps its pitch bar and beat number until the next Play, Restart, rotate or level change. Previews never show a bar.
+- The fail message ("N of M beats right · K silent") stays until the next Play, Restart or level change.
+- The dial-target outline (a dial highlights the tile it points at) is a teaching aid on levels 1–4 only.
+- The hint popover sits fixed at the top of the screen, clear of the board and the controls; tapping it only closes it.
+- Restart is instant, and ↶ Undo right after a Restart brings back the dials, the selection and the last Play's bars and message.
+- `node tools/test_select.js`: tap a tile's centre, then Play, starts from that tile on every level (Chromium mouse + WebKit touch); also covers the items above.
