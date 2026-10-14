@@ -1,6 +1,6 @@
 const {chromium}=require('playwright-core');
 (async()=>{const b=await chromium.launch({executablePath:'/usr/bin/google-chrome',args:['--autoplay-policy=no-user-gesture-required']});
- const p=await b.newPage();const errs=[];p.on('pageerror',e=>errs.push(e.message));
+ const p=await b.newPage();const errs=[],bad=[];p.on('pageerror',e=>errs.push(e.message));p.on('response',r=>{if(r.status()>=400)bad.push(r.status()+' '+r.url())});p.on('console',m=>{if(m.type()==='error')bad.push('console: '+m.text())});
  await p.goto('http://localhost:8765/index.html');await p.evaluate(()=>{localStorage.clear()});
  const ok=(c,m)=>{console.log((c?'PASS ':'FAIL ')+m);if(!c)process.exitCode=1};
  const go=async i=>{await p.evaluate(i=>load(i),i);await p.waitForTimeout(50)};
@@ -14,7 +14,7 @@ const {chromium}=require('playwright-core');
   const got=await p.evaluate(()=>({n:document.querySelectorAll('.tile.silent').length,msg:msg.textContent,vis:getComputedStyle(msg).opacity}));
   ok(got.n===w.n&&got.msg===`${w.n} tile${w.n===1?'':'s'} silent`,`L${L+1} silent tiles highlighted: ${got.n} / msg "${got.msg}"`);
   await p.screenshot({path:`tools/shots/fail_L${L+1}.png`});
-  await p.waitForFunction(()=>!busy,null,{timeout:8000});ok(await p.$$eval('.tile.silent',e=>e.length)===0,`L${L+1} reset after highlight`)}
+  await p.waitForFunction(()=>!busy,null,{timeout:8000});ok(await p.$$eval('.tile.silent',e=>e.length)===0,`L${L+1} reset after highlight`);ok(await p.evaluate(()=>msg.textContent===''&&msg.getAttribute('aria-hidden')==='true'),`L${L+1} note emptied + aria-hidden after hide`)}
  // delay label fully visible
  await go(5);const dv=await p.evaluate(()=>[...document.querySelectorAll('.tile.delay')].every(t=>{const a=t.getBoundingClientRect(),l=t.querySelector('.dl').getBoundingClientRect(),h=t.querySelector('.hg');return l.left>=a.left&&l.right<=a.right&&l.bottom<=a.bottom&&parseFloat(getComputedStyle(h).opacity)>=.5&&t.querySelector('.dl').textContent==='+1 beat'}));ok(dv,'"+1 beat" label inside tile and hourglass visible at rest');
  // Level 8 (Turn): rotatable tiles
@@ -48,10 +48,11 @@ const {chromium}=require('playwright-core');
     P.forEach(([x,y],i)=>{for(let k=0;k<(4-ks[i])%4;k++)rotate(grid[y][x])})}});
   for(let i=0;i<s.P.length;i++)for(let k=0;k<s.ks[i];k++)await p.click(`#c${s.P[i][0]}_${s.P[i][1]} .rot`);
   await p.click(`#c${s.x}_${s.y}`);await p.waitForTimeout(700);
-  if(L===5){await p.waitForTimeout(500);const lb=await p.$$eval('.tile.delay .beatno',e=>e.map(x=>x.textContent));ok(lb.length&&lb.every(t=>/^\d+→\d+$/.test(t)),'delay beat label arrival→pass-on: '+lb)}
+  if(L===5){await p.waitForTimeout(500);ok(await p.evaluate(()=>[...document.querySelectorAll('.tile.delay')].every(t=>{const b=t.querySelector('.beatno'),d=t.querySelector('.dl');if(!b)return true;const r1=b.getBoundingClientRect(),r2=d.getBoundingClientRect(),T=t.getBoundingClientRect();return r1.bottom<=r2.top&&r1.left>=T.left&&r1.right<=T.right})),'delay a→b pill inside tile, no overlap with +1 beat');const lb=await p.$$eval('.tile.delay .beatno',e=>e.map(x=>x.textContent));ok(lb.length&&lb.every(t=>/^\d+→\d+$/.test(t)),'delay beat label arrival→pass-on: '+lb)}
   if(L===6){const past=await p.$$eval('.tile.past',e=>e.length);const bn=await p.$$eval('.beatno',e=>e.length);ok(past>0&&bn>0,`L7 earlier tiles faded (${past}) and beat numbers shown (${bn})`);await p.screenshot({path:'tools/shots/shot_l7_chain.png'})}
   await p.waitForSelector('#win',{state:'visible',timeout:10000});ok(true,`level ${L+1} solved through UI`);
-  await p.screenshot({path:`tools/shots/shot_win_${L+1}.png`});await p.click('#next');await p.waitForTimeout(50);ok(await p.evaluate(()=>li)===(L+1)%10,'Next advances (Play again wraps to 1)');}
+  await p.screenshot({path:`tools/shots/shot_win_${L+1}.png`});
+  if(L===3){await p.click('#dots i[data-j="1"]');ok(await p.evaluate(()=>li===1&&document.getElementById('win').style.display==='none'&&!busy),'level dot clickable over RESOLVED overlay');await go(L+1);continue}await p.click('#next');await p.waitForTimeout(50);ok(await p.evaluate(()=>li)===(L+1)%10,'Next advances (Play again wraps to 1)');}
  await go(9);await p.screenshot({path:'tools/shots/shot_l10.png'});await go(6);await p.screenshot({path:'tools/shots/shot_l7.png'});
  ok(await p.evaluate(()=>!!MASTER&&AC.destination!==undefined),'master chain created');
- ok(errs.length===0,'no page errors '+errs.join('|'));await b.close()})();
+ ok(errs.length===0,'no page errors '+errs.join('|'));ok(bad.length===0,'no 404s / console errors (favicon) '+bad.join('|'));ok(await p.evaluate(()=>!!document.querySelector('link[rel=icon][href^="data:image/svg+xml"]')),'inline SVG favicon present');await b.close()})();
