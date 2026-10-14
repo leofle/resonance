@@ -10,11 +10,12 @@ const {chromium}=require('playwright-core');const {PNG}=require('pngjs');
     for(let y=0;y<grid.length;y++)for(let x=0;x<grid[0].length;x++)if(grid[y][x]&&simulate(grid,x,y).solved){render();return[x,y]}
     P.forEach(([x,y],i)=>{for(let k=0;k<(4-ks[i])%4;k++)rotate(grid[y][x])})}});
   await p.waitForTimeout(100);const base2=PNG.sync.read(await p.screenshot());
-  await p.evaluate(([x,y])=>play(x,y),s);let worst=0;
-  for(const t of [250,450,650,850]){await p.waitForTimeout(200);const img=PNG.sync.read(await p.screenshot({path:`tools/shots/fx_L${L+1}_${t}.png`}));let n=0;
+  await p.evaluate(([x,y])=>play(x,y),s);const T0=Date.now();let worst=0,shots=0;
+  const endMs=await p.evaluate(([x,y])=>{const ev=simulate(grid,x,y).ev;return ev[ev.length-1].beat*180},s);
+  for(const t of [250,450,650,850,1050,1250,1450]){await p.waitForTimeout(150);if(Date.now()-T0>endMs+250)break;shots++;const img=PNG.sync.read(await p.screenshot({path:`tools/shots/fx_L${L+1}_${t}.png`}));let n=0;
    for(let y=0;y<img.height;y++)for(let x=0;x<img.width;x++){if(x>=box.x-1&&x<=box.r+1&&y>=box.y-1&&y<=box.b+1)continue;const i=(y*img.width+x)*4;
-    if(Math.abs(img.data[i]-base2.data[i])+Math.abs(img.data[i+1]-base2.data[i+1])+Math.abs(img.data[i+2]-base2.data[i+2])>12)n++}
-   worst=Math.max(worst,n)}
-  console.log((worst?'FAIL':'PASS')+` L${L+1}: changed pixels outside board bbox mid-chain = ${worst}`);if(worst)fail=1;
+    if(Math.abs(img.data[i]-base2.data[i])+Math.abs(img.data[i+1]-base2.data[i+1])+Math.abs(img.data[i+2]-base2.data[i+2])>12){n++;if(n==1)console.log("  first px",x,y)}}
+   if(n>worst){worst=n;console.log("  t",t,"box",JSON.stringify(box))}}
+  console.log((worst?'FAIL':'PASS')+` L${L+1}: changed pixels outside board bbox mid-chain = ${worst} (${shots} screenshots over ${endMs}ms chain)`);if(worst)fail=1;
   await p.waitForFunction(()=>!busy||document.getElementById('win').style.display==='flex',null,{timeout:15000});await p.evaluate(()=>{document.getElementById('win').style.display='none'})}
  process.exitCode=fail;await b.close()})();

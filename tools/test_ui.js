@@ -5,6 +5,18 @@ const {chromium}=require('playwright-core');
  const ok=(c,m)=>{console.log((c?'PASS ':'FAIL ')+m);if(!c)process.exitCode=1};
  const go=async i=>{await p.evaluate(i=>load(i),i);await p.waitForTimeout(50)};
  const toks=()=>p.evaluate(()=>grid.flat().map(c=>c?c.t:'.').join(' '));
+ await p.reload();ok(await p.evaluate(()=>li)===0,'fresh load starts at level 1');
+ await p.evaluate(()=>{localStorage.resDone='[0,1,2]';localStorage.resLvl='8'});await p.reload();ok(await p.evaluate(()=>li)===3,'reload starts at first unsolved level (4)');
+ await p.evaluate(()=>{localStorage.clear()});
+ // failed chain feedback on levels 4, 7, 10
+ for(const L of [3,6,9]){await go(L);const w=await p.evaluate(()=>{let best=null;for(let y=0;y<grid.length;y++)for(let x=0;x<grid[0].length;x++)if(grid[y][x]){const r=simulate(grid,x,y);if(!r.solved){const rung=new Set(r.ev.filter(e=>!e.muted).map(e=>e.x+','+e.y));const n=grid.flat().filter(Boolean).length-rung.size;if(!best||n<best.n)best={id:`c${x}_${y}`,n}}}return best});
+  await p.click('#'+w.id);await p.waitForSelector('.tile.silent',{timeout:10000});
+  const got=await p.evaluate(()=>({n:document.querySelectorAll('.tile.silent').length,msg:msg.textContent,vis:getComputedStyle(msg).opacity}));
+  ok(got.n===w.n&&got.msg===`${w.n} tile${w.n===1?'':'s'} silent`,`L${L+1} silent tiles highlighted: ${got.n} / msg "${got.msg}"`);
+  await p.screenshot({path:`tools/shots/fail_L${L+1}.png`});
+  await p.waitForFunction(()=>!busy,null,{timeout:8000});ok(await p.$$eval('.tile.silent',e=>e.length)===0,`L${L+1} reset after highlight`)}
+ // delay label fully visible
+ await go(5);const dv=await p.evaluate(()=>[...document.querySelectorAll('.tile.delay')].every(t=>{const a=t.getBoundingClientRect(),l=t.querySelector('.dl').getBoundingClientRect(),h=t.querySelector('.hg');return l.left>=a.left&&l.right<=a.right&&l.bottom<=a.bottom&&parseFloat(getComputedStyle(h).opacity)>=.5&&t.querySelector('.dl').textContent==='+1 beat'}));ok(dv,'"+1 beat" label inside tile and hourglass visible at rest');
  // Level 8 (Turn): rotatable tiles
  await go(7);const t0=await toks();const rot=await p.$$('.tile.rotable');ok(rot.length>0,'rot tiles render with .rot class');
  const id=await rot[0].getAttribute('id');
@@ -36,6 +48,7 @@ const {chromium}=require('playwright-core');
     P.forEach(([x,y],i)=>{for(let k=0;k<(4-ks[i])%4;k++)rotate(grid[y][x])})}});
   for(let i=0;i<s.P.length;i++)for(let k=0;k<s.ks[i];k++)await p.click(`#c${s.P[i][0]}_${s.P[i][1]} .rot`);
   await p.click(`#c${s.x}_${s.y}`);await p.waitForTimeout(700);
+  if(L===5){await p.waitForTimeout(500);const lb=await p.$$eval('.tile.delay .beatno',e=>e.map(x=>x.textContent));ok(lb.length&&lb.every(t=>/^\d+→\d+$/.test(t)),'delay beat label arrival→pass-on: '+lb)}
   if(L===6){const past=await p.$$eval('.tile.past',e=>e.length);const bn=await p.$$eval('.beatno',e=>e.length);ok(past>0&&bn>0,`L7 earlier tiles faded (${past}) and beat numbers shown (${bn})`);await p.screenshot({path:'tools/shots/shot_l7_chain.png'})}
   await p.waitForSelector('#win',{state:'visible',timeout:10000});ok(true,`level ${L+1} solved through UI`);
   await p.screenshot({path:`tools/shots/shot_win_${L+1}.png`});await p.click('#next');await p.waitForTimeout(50);ok(await p.evaluate(()=>li)===(L+1)%10,'Next advances (Play again wraps to 1)');}
